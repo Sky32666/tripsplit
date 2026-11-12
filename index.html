@@ -104,6 +104,16 @@ button:active,.chip:active,.pill:active,label.btn:active,.scanbtn:active{transfo
 #tabbody{animation:fade .25s}
 .av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:12.5px;font-weight:800;flex:none;vertical-align:middle}
 .av.lg{width:38px;height:38px;font-size:15px}
+.av.emo{font-size:15px}.av.emo.lg{font-size:21px}
+.av.xl{width:84px;height:84px;font-size:34px;border:3px solid var(--card);box-shadow:var(--sh)}.av.emo.xl{font-size:44px}
+.avgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
+.avgrid button{border:0;background:var(--card);border-radius:14px;font-size:24px;aspect-ratio:1;box-shadow:var(--sh)}
+.avgrid button.on{outline:2.5px solid var(--pri)}
+.dots{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.dots button{width:34px;height:34px;border-radius:50%;border:3px solid var(--card);box-shadow:var(--sh)}
+.dots button.on{outline:2.5px solid var(--ink)}
+.mem .avbtn{border:0;background:none;padding:0;position:relative}
+.mem .avbtn::after{content:"✎";position:absolute;right:-4px;bottom:-4px;font-size:10px;background:var(--card);border-radius:50%;width:15px;height:15px;display:grid;place-items:center;box-shadow:var(--sh)}
 .empty{text-align:center;color:var(--mut);padding:36px 10px}
 .empty .e{font-size:46px;letter-spacing:6px;animation:floaty 4s ease-in-out infinite;display:inline-block}
 .brow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}
@@ -382,15 +392,15 @@ async function pushEnable(){
   try{say('开启中…');if((await Notification.requestPermission())!=='granted'){say('没有允许通知');return}
     const reg=await swReady();if(!reg)return say('后台服务没启动，刷新页面再试');
     const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(CFG.vapidPublicKey)}));
-    await savePushRows(sub);toast('✅ 锁屏推送已开启');
+    const n=await savePushRows(sub);if(!n){say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先回首页点右上角 🔗，粘贴群里的邀请链接加入旅行、选好你是谁，再回来开启。');return}toast('✅ 锁屏推送已开启');
   }catch(e){say('没开成：'+(e&&e.message||'再试一次'))}
 }
 async function pushTest(){
   const box=$('#push-msg');const say=m=>{if(box)box.textContent=m};
   try{say('发送中…（锁屏或切到别的 App 更容易看到）');const reg=await swReady(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)return renderPushBox();
-    await savePushRows(sub);
+    if(!(await savePushRows(sub)))return say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先回首页点右上角 🔗，粘贴群里的邀请链接加入旅行、选好你是谁，再回来开启。');
     const r=await fetch(fnUrl(),{method:'POST',headers:fnHeaders(),body:JSON.stringify({endpoint:sub.endpoint,title:'🔔 旅账测试通知',text:'看到这条就说明锁屏推送可以用了！',url:'?tab=set'})}).then(x=>x.json()).catch(()=>({error:'net'}));
-    if(r.error||r.message||r.msg)return say('推送服务还没部署好（Supabase 里的 ts-notify 函数）');
+    if(r.error||r.message||r.msg)return say('推送服务出错了：'+(r.error||r.message||r.msg));
     say(r.sent?'✅ 已发出，几秒内会弹出通知':'没发出去：点「重新连接」再试');
   }catch(e){say('测试失败：'+(e&&e.message||'检查网络'))}
 }
@@ -412,7 +422,20 @@ async function renderPushBox(){
    ${st==='off'?'<button class="btn primary block" data-act="pushOn">📲 开启锁屏推送</button>':''}
    ${st==='on'?'<button class="btn block" data-act="pushTest">发一条测试通知</button><button class="btn ghost block" data-act="pushReset">收不到？重新连接</button>':''}
    ${st==='denied'?'<button class="btn ghost block" data-act="pushReset">我已允许，重新连接</button>':''}
-   <div id="push-msg" class="small" style="text-align:center"></div>`;
+   <div id="push-msg" class="small" style="text-align:center"></div><div id="push-diag" class="mut small" style="margin-top:8px;text-align:center"></div>`;
+  pushDiag();
+}
+async function pushDiag(){
+  const el=$('#push-diag');if(!el)return;const ok=b=>b?'✓':'✗',parts=[];
+  if(/iPhone|iPad/.test(navigator.userAgent))parts.push('主屏幕打开 '+ok(standalone()));
+  parts.push('通知权限 '+('Notification' in window?{granted:'✓',denied:'✗ 拒绝',default:'未问'}[Notification.permission]:'不支持'));
+  let local=null;try{const reg='serviceWorker' in navigator&&await swReady();local=reg&&await reg.pushManager.getSubscription()}catch{}
+  parts.push('本机订阅 '+ok(local));
+  const joined=Object.values(S.trips).filter(t=>t.cloud&&S.me[t.id]).length;parts.push('已加入旅行 '+joined);
+  let server=0;try{if(local&&sb){const{data}=await sb.from('ts_push').select('trip_id').eq('endpoint',local.endpoint);server=(data||[]).length}}catch{}
+  parts.push('服务器记录 '+server);
+  el.textContent='诊断：'+parts.join(' · ');
+  if(local&&joined&&server<joined)savePushRows(local).then(()=>{if($('#push-diag'))pushDiag()}).catch(()=>{});
 }
 function openFromUrl(q){const p=new URLSearchParams(q),id=p.get('trip'),tab=p.get('tab');
   if(id&&S.trips[id]){S.cur=id;view={tab:tab||'list',q:'',cat:''};animNext=true;persist();render();refreshCurrent();return true}
@@ -425,7 +448,11 @@ const mem=(t,id)=>t.members.find(m=>m.id===id);
 const mname=(t,id)=>mem(t,id)?.name||'?';
 const activeM=t=>t.members.filter(m=>!m.deleted);
 const live=t=>t.expenses.filter(e=>!e.deleted);
-const av=(t,id,cls='')=>{const m=mem(t,id);return `<span class="av ${cls}" style="background:${m?.color||'#999'}">${esc((m?.name||'?').slice(0,1))}</span>`};
+const av=(t,id,cls='')=>{const m=mem(t,id),a=m&&m.avatar,bg=m?.color||'#999';
+  if(a&&a.startsWith('data:image/'))return `<span class="av ${cls}" style="background:${bg} url(${a}) center/cover"></span>`;
+  if(a)return `<span class="av emo ${cls}" style="background:${bg}">${esc(a)}</span>`;
+  return `<span class="av ${cls}" style="background:${bg}">${esc((m?.name||'?').slice(0,1))}</span>`};
+const AV_EMOJI=['😎','🥳','🤠','😺','🐶','🐼','🦊','🐨','🐯','🐸','🐧','🦄','🍜','🍣','🧋','☕','🍺','🍓','🌸','🌊','🏝️','✈️','📷','🎒','⛷️','🏄','🚴','🎮','🎧','⭐'];
 
 /* ================= 计算核心 ================= */
 // 按权重把整数 total 分配，保证总和精确（最大余数法）
@@ -518,6 +545,7 @@ function homeView(){
   return `<header class="top"><div class="brand">旅账<small>和朋友一起的旅行账本</small></div><button class="icon" data-act="importSheet" title="导入">🔗</button></header>
   <main class="wrap">
   <div class="hello-card">${greeting()}</div>
+  ${!ids.length&&typeof standalone==='function'&&standalone()?`<div class="banner">📲 这是主屏幕版的旅账，和浏览器里的数据是分开的。点右上角 🔗，粘贴群里的<b>邀请链接</b>，就能加入你们的旅行。</div>`:''}
   ${cards||`<div class="empty"><div class="e">🧳✈️🏝️</div><p>和朋友出去玩，谁付了钱、谁欠谁<br>交给旅账算清楚，大家只管开心 🎉</p></div>`}
   <button class="btn primary block big" data-act="newTrip">＋ 开始一段新旅行</button>
   <button class="btn ghost block" data-act="importSheet">🔗 收到朋友的邀请链接？点这里</button>
@@ -531,7 +559,7 @@ function tripView(t){
   const first=ex.map(e=>e.date).sort()[0],dn=first?dayDiff(first,today())+1:0;
   const dayLbl=!first?'准备出发 ✈️':dn>0?`Day ${dn}`:'即将出发 ✈️';
   let meLine='';
-  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
+  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span data-act="avatar" style="display:flex;align-items:center;gap:6px;cursor:pointer">${av(t,me)}${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
   const who=me?'':`<div class="banner"><b>👋 你是谁？</b><span class="mut small"> 选一下，就能看到「你欠 / 你借出」</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}" style="${m.device&&m.device!==DEV?'opacity:.45':''}">${av(t,m.id)}${esc(m.name)}${m.device&&m.device!==DEV?' 🔒':''}</button>`).join('')}</div><div class="mut small" style="margin-top:6px">🔒 = 已经被别的手机认领</div></div>`;
   const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
   const un=unreadCount(t);
@@ -646,14 +674,14 @@ function statsView(t){
 }
 function setView(t){
   const me=S.me[t.id],hasEx=live(t).length>0,P=S.prefs;
-  const ms=activeM(t).map(m=>`<div class="mem">${av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':`<button data-act="setMe" data-id="${m.id}">设为我</button>`}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
+  const ms=activeM(t).map(m=>`<div class="mem">${me===m.id?`<button class="avbtn" data-act="avatar" aria-label="换头像">${av(t,m.id)}</button>`:av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':`<button data-act="setMe" data-id="${m.id}">设为我</button>`}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
   const sw=(k,title,sub)=>`<div class="switch" style="margin:12px 0"><div><b>${title}</b><div class="mut small">${sub}</div></div><input type="checkbox" data-pref="${k}" ${P[k]?'checked':''}></div>`;
   return `<div class="card"><h3>🎨 旅行信息</h3>
    <label class="fld"><span>名称</span><input data-ts="name" value="${esc(t.name)}"></label>
    <div class="fld"><span>主题配色</span></div><div class="themes">${themesHTML(THEMES[t.theme]?t.theme:'mountain','setTheme')}</div>
    <div class="fld"><span>封面</span></div><div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
    <label class="fld"><span>记账本位币 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
-  <div class="card"><h3>👥 成员</h3>${ms}
+  <div class="card"><h3>👥 成员</h3>${me?`<button class="btn block" data-act="avatar" style="margin-top:0">${av(t,me)} 换我的头像</button>`:''}${ms}
    <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember">添加</button></div></div>
   <div class="card"><h3>🔔 通知</h3>
    ${sw('toast','朋友记账时弹出提醒','App 开着的时候，顶部弹出「谁记了什么」')}
@@ -1136,6 +1164,30 @@ function feedView(t){
     ${e.deleted?(canEdit(t,e)?`<button class="btn sm" data-act="restore" data-id="${e.id}">恢复</button>`:''):`<button class="btn sm" data-act="edit" data-id="${e.id}">查看</button>`}</div>`}).join('')}</div>`;
 }
 
+/* ================= 头像 ================= */
+function myAvatarTargets(){return Object.values(S.trips).filter(t=>S.me[t.id]).map(t=>mem(t,S.me[t.id])).filter(Boolean)}
+function setMyAvatar(patch){const t=trip(),me=mem(t,S.me[t.id]);if(!me)return;
+  // 同步到我所有旅行里的自己
+  for(const m of myAvatarTargets()){if(patch.avatar!==undefined){if(patch.avatar)m.avatar=patch.avatar;else delete m.avatar}if(patch.color)m.color=patch.color;m.updatedAt=now()}
+  save();render();renderAvatar();buzz(8)}
+function openAvatar(){const t=trip();if(!S.me[t.id])return toast('👋 先选一下你是谁');openSheet('');renderAvatar()}
+function renderAvatar(){
+  const sh=$('#sheet');if(!sh||!$('#sheet-root.open'))return;const t=trip(),m=mem(t,S.me[t.id]);if(!m)return;
+  sh.innerHTML=`<div class="sheet-head"><button data-act="closeSheet">完成</button><b>换头像</b><span style="width:44px"></span></div>
+  <div class="sheet-body"><div style="text-align:center;margin:6px 0 12px">${av(t,m.id,'xl')}<div style="margin-top:6px;font-weight:700">${esc(m.name)}</div><div class="mut small">所有旅行里的你都会一起换</div></div>
+   <label class="btn primary block" style="cursor:pointer">📷 用照片做头像<input type="file" accept="image/*" id="av-file" hidden></label>
+   <div class="fld"><span>或者选一个表情</span></div>
+   <div class="avgrid">${AV_EMOJI.map(e=>`<button class="${m.avatar===e?'on':''}" data-act="avEmoji" data-e="${e}">${e}</button>`).join('')}</div>
+   <div class="fld"><span>底色</span></div>
+   <div class="dots">${COLORS.map(c=>`<button class="${m.color===c?'on':''}" style="background:${c}" data-act="avColor" data-c="${c}" aria-label="颜色"></button>`).join('')}</div>
+   <button class="btn ghost block" data-act="avReset">恢复成名字首字</button></div>`;
+}
+async function avatarFromFile(file){
+  try{const cv=await imgToCanvas(file,400),n=Math.min(cv.width,cv.height),o=document.createElement('canvas');o.width=o.height=128;
+    o.getContext('2d').drawImage(cv,(cv.width-n)/2,(cv.height-n)/2,n,n,0,0,128,128);setMyAvatar({avatar:o.toDataURL('image/jpeg',.8)});toast('✓ 头像已更新')}
+  catch{toast('无法读取这张照片')}
+}
+
 /* ================= 事件 ================= */
 const ACT={
   home(){S.cur=null;persist();render();scrollTo(0,0)},
@@ -1152,6 +1204,10 @@ const ACT={
     const old=S.me[t.id]&&mem(t,S.me[t.id]);if(old&&old.id!==m.id&&old.device===DEV){old.device=null;old.updatedAt=now()}
     m.device=DEV;m.updatedAt=now();S.me[t.id]=m.id;save();render();pushSyncMe()},
   add(){const t=trip();if(!S.me[t.id]){toast('👋 先在上面选一下你是谁');scrollTo({top:0,behavior:'smooth'});return}openEditor(null)},
+  avatar(){openAvatar()},
+  avEmoji(el){setMyAvatar({avatar:el.dataset.e})},
+  avColor(el){setMyAvatar({color:el.dataset.c})},
+  avReset(){setMyAvatar({avatar:null})},
   goBal(){view.tab='bal';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
   stMode(el){stS.mode=el.dataset.m;const t=trip(),me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,stS.other):suggestAmt(t,stS.other,me);renderSettle()},
   payConfirm(el){const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
@@ -1243,6 +1299,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
   if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];el.value='';if(!S.me[t.id])return toast('👋 先在上面选一下你是谁');openEditor(null);scanReceipt(f)}
   if(el.id==='st-other'&&stS){stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);const a=$('#st-amt');if(a)a.value=stS.amt?plain(stS.amt,t.base):''}
+  if(el.id==='av-file'&&el.files[0]){const f=el.files[0];el.value='';avatarFromFile(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
   if(el.dataset.ts&&t){const k=el.dataset.ts;
