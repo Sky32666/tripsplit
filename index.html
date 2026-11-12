@@ -289,6 +289,12 @@ async function flush(){
   finally{flushing=false}
   if(ok&&pendingRows().length)scheduleFlush();
 }
+function remoteMsg(t,d,old){const w=mname(t,d.by),me=S.me[t.id],a=fmt(d.amount,d.currency);
+  if(d.type==='payment'){const st=d.status||'confirmed';if(d.deleted)return `🔔 ${w} 撤回了一笔还款`;
+    if(st==='pending')return d.to===me?`💸 ${mname(t,d.from)} 说已还你 ${a}，去「结余」确认`:`💸 ${mname(t,d.from)} 说已还 ${mname(t,d.to)} ${a}`;
+    if(st==='rejected')return `✗ ${mname(t,d.to)} 说没收到 ${mname(t,d.from)} 的 ${a}`;
+    return `✅ ${mname(t,d.to)} 确认收到 ${mname(t,d.from)} 的 ${a}`}
+  return `🔔 ${w} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${d.title} ${a}`}
 function setSync(s){syncState=s;const el=$('#syncdot');if(el)el.textContent=syncIcon(trip())}
 function syncIcon(t){if(!t||!t.cloud)return'⇅';return{ok:'☁️',busy:'⏳',err:'⚠️',offline:'📴'}[syncState]||'☁️'}
 function applyRow(r){
@@ -323,8 +329,7 @@ function subscribe(){
   chanKey=key;if(!key)return;
   chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{const r=p.new;if(!r||!r.id)return;const t=S.trips[r.trip_id];
     if(t&&r.kind==='expense'&&r.updated_at>(S.synced[r.id]||0)){const d=r.data,old=t.expenses.find(x=>x.id===r.id),me=S.me[t.id];
-      if(d.by&&d.by!==me){const what=d.type==='payment'?`${mname(t,d.from)}→${mname(t,d.to)} 还款`:d.title;
-        notify(`🔔 ${mname(t,d.by)} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${what} ${fmt(d.amount,d.currency)}`)}
+      if(d.by&&d.by!==me)notify(remoteMsg(t,d,old));
       if(!d.deleted)flashIds.add(r.id)}
     applyRow(r);persist();renderSoft()}).subscribe();
 }
@@ -339,8 +344,78 @@ async function joinTrip(id){
   toast('正在加入…');
   try{const ok=await pullTrip(id);if(!ok)return toast('找不到这个旅行，链接可能不完整')}
   catch(e){console.warn(e);return toast('连接云端失败：'+(e.message||'请检查网络'))}
-  S.cur=id;S.seen[id]=now();view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('🎉 已加入「'+trip().name+'」，先选一下你是谁');
+  S.cur=id;S.seen[id]=now();view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('🎉 已加入「'+trip().name+'」，先选一下你是谁');pushSyncMe();
 }
+/* ---------- 锁屏推送（和慢慢来同一套：Web Push + Supabase 函数） ---------- */
+const fnUrl=()=>CFG.supabaseUrl+'/functions/v1/ts-notify';
+const fnHeaders=()=>({'Content-Type':'application/json',apikey:CFG.supabaseKey});
+function pushTo(t,to,title,text,url,tag){
+  if(!sb||!t||!t.cloud||!CFG.vapidPublicKey)return;
+  const me=S.me[t.id];to=[...new Set((to||[]).filter(x=>x&&x!==me))];if(!to.length)return;
+  fetch(fnUrl(),{method:'POST',keepalive:true,headers:fnHeaders(),body:JSON.stringify({trip:t.id,to,from:me,title,text,url:url||`?trip=${t.id}&tab=list`,tag})}).catch(()=>{});
+}
+function pushExpense(t,e,verb){
+  const me=S.me[t.id],to=Object.keys({...payersOf(e),...sharesOf(e)});
+  const mine=id=>{const o=sharesOf(e)[id];return o?`，你的那份 ${fmt(o,e.currency)}`:''};
+  // 每个人的份额不一样，所以分开发
+  for(const id of to)if(id!==me)pushTo(t,[id],`${t.emoji||'🧳'} ${t.name}`,`${mname(t,me)} ${verb}「${e.title}」${fmt(e.amount,e.currency)}${verb==='删除了'?'':mine(id)}`,`?trip=${t.id}&tab=list`,e.id);
+}
+const b64ToBytes=b=>{const s=atob((b+'='.repeat((4-b.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(s,c=>c.charCodeAt(0))};
+const standalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+const swReady=()=>Promise.race([navigator.serviceWorker.ready,new Promise(r=>setTimeout(()=>r(null),4000))]);
+async function pushState(){
+  if(/MicroMessenger/i.test(navigator.userAgent))return'wechat';
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return /iPhone|iPad/.test(navigator.userAgent)&&!standalone()?'home':'unsupported';
+  if(!sb||!CFG.vapidPublicKey)return'nocloud';
+  if(Notification.permission==='denied')return'denied';
+  const reg=await swReady();if(!reg)return'unsupported';
+  return(await reg.pushManager.getSubscription())?'on':'off';
+}
+async function savePushRows(sub){
+  const rows=Object.values(S.trips).filter(t=>t.cloud&&S.me[t.id]).map(t=>({endpoint:sub.endpoint,trip_id:t.id,member:S.me[t.id],sub:sub.toJSON(),created:now()}));
+  if(!rows.length)return 0;const{error}=await sb.from('ts_push').upsert(rows);if(error)throw error;return rows.length;
+}
+async function pushSyncMe(){try{if(!sb||!('serviceWorker' in navigator))return;const reg=await swReady();const sub=reg&&await reg.pushManager.getSubscription();if(sub)await savePushRows(sub)}catch(e){console.warn(e)}}
+async function pushEnable(){
+  const box=$('#push-msg');const say=m=>{if(box)box.textContent=m};
+  try{say('开启中…');if((await Notification.requestPermission())!=='granted'){say('没有允许通知');return}
+    const reg=await swReady();if(!reg)return say('后台服务没启动，刷新页面再试');
+    const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(CFG.vapidPublicKey)}));
+    await savePushRows(sub);toast('✅ 锁屏推送已开启');
+  }catch(e){say('没开成：'+(e&&e.message||'再试一次'))}
+}
+async function pushTest(){
+  const box=$('#push-msg');const say=m=>{if(box)box.textContent=m};
+  try{say('发送中…（锁屏或切到别的 App 更容易看到）');const reg=await swReady(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)return renderPushBox();
+    await savePushRows(sub);
+    const r=await fetch(fnUrl(),{method:'POST',headers:fnHeaders(),body:JSON.stringify({endpoint:sub.endpoint,title:'🔔 旅账测试通知',text:'看到这条就说明锁屏推送可以用了！',url:'?tab=set'})}).then(x=>x.json()).catch(()=>({error:'net'}));
+    if(r.error||r.message||r.msg)return say('推送服务还没部署好（Supabase 里的 ts-notify 函数）');
+    say(r.sent?'✅ 已发出，几秒内会弹出通知':'没发出去：点「重新连接」再试');
+  }catch(e){say('测试失败：'+(e&&e.message||'检查网络'))}
+}
+async function pushReset(){
+  try{const reg=await swReady();if(!reg)return;await reg.update().catch(()=>{});const old=await reg.pushManager.getSubscription();
+    if(old){await sb.from('ts_push').delete().eq('endpoint',old.endpoint);await old.unsubscribe().catch(()=>{})}
+    await pushEnable();await pushTest();
+  }catch(e){toast('没连上：'+(e&&e.message||''))}
+}
+async function renderPushBox(){
+  const el=$('#push-box');if(!el)return;const st=await pushState().catch(()=>'unsupported');
+  const msg={on:'✅ 已开启。朋友记账、还钱、确认收款时，锁屏也会收到通知。',off:'App 关着也能收到「谁记了账、谁还了钱」。',
+    denied:'通知被拒绝了：到手机「设置 → 通知 → 旅账（或浏览器）」打开允许通知，再回来点重新连接。',
+    home:'iPhone 要先添加到主屏幕：点 Safari 底部的分享 → 添加到主屏幕，再从主屏幕的「旅账」打开，就能开启了（iOS 16.4 以上）。',
+    wechat:'微信里收不到锁屏推送：点右上角 ··· → 在浏览器打开。iPhone 还要添加到主屏幕。',
+    unsupported:'这个浏览器不支持锁屏推送（华为没有谷歌服务的手机通常不行），App 打开时仍会弹出提醒。',
+    nocloud:'开启云同步后才能用锁屏推送。'}[st];
+  el.innerHTML=`<div class="mut small" style="margin-bottom:8px">${msg}</div>
+   ${st==='off'?'<button class="btn primary block" data-act="pushOn">📲 开启锁屏推送</button>':''}
+   ${st==='on'?'<button class="btn block" data-act="pushTest">发一条测试通知</button><button class="btn ghost block" data-act="pushReset">收不到？重新连接</button>':''}
+   ${st==='denied'?'<button class="btn ghost block" data-act="pushReset">我已允许，重新连接</button>':''}
+   <div id="push-msg" class="small" style="text-align:center"></div>`;
+}
+function openFromUrl(q){const p=new URLSearchParams(q),id=p.get('trip'),tab=p.get('tab');
+  if(id&&S.trips[id]){S.cur=id;view={tab:tab||'list',q:'',cat:''};animNext=true;persist();render();refreshCurrent();return true}
+  if(tab&&trip()){view.tab=tab;render();return true}return false}
 const joinLink=t=>location.origin+location.pathname+'#join='+t.id;
 let view={tab:'list',q:'',cat:''};
 let ed=null;
@@ -382,7 +457,7 @@ function baseTotal(e,t){return e.currency===t.base?e.amount:Math.round(fromMinor
 function baseSplit(e,t){const T=baseTotal(e,t);return{T,paid:allocate(T,payersOf(e)),owed:allocate(T,sharesOf(e))}}
 function balances(t){
   const b={};t.members.forEach(m=>b[m.id]=0);
-  for(const e of live(t)){const{paid,owed}=baseSplit(e,t);for(const k in paid)b[k]=(b[k]||0)+paid[k];for(const k in owed)b[k]=(b[k]||0)-owed[k]}
+  for(const e of eff(t)){const{paid,owed}=baseSplit(e,t);for(const k in paid)b[k]=(b[k]||0)+paid[k];for(const k in owed)b[k]=(b[k]||0)-owed[k]}
   return b;
 }
 function simplify(b){
@@ -396,12 +471,22 @@ function simplify(b){
 }
 function pairwise(t){
   const d={};
-  for(const e of live(t)){const{T,paid,owed}=baseSplit(e,t);if(!T)continue;
+  for(const e of eff(t)){const{T,paid,owed}=baseSplit(e,t);if(!T)continue;
     for(const o in owed)for(const p in paid){if(o===p)continue;const x=owed[o]*paid[p]/T,k=o<p?o+'|'+p:p+'|'+o;d[k]=(d[k]||0)+(o<p?x:-x)}}
   const res=[];for(const k in d){const[a,b]=k.split('|'),v=Math.round(d[k]);if(v>0)res.push({from:a,to:b,amt:v});else if(v<0)res.push({from:b,to:a,amt:-v})}
   return res.sort((a,b)=>b.amt-a.amt);
 }
 const involves=(e,id)=>id in payersOf(e)||id in sharesOf(e);
+const pstat=e=>e.type==='payment'?(e.status||'confirmed'):null;
+const counts=e=>!e.deleted&&(e.type!=='payment'||pstat(e)==='confirmed');
+const eff=t=>t.expenses.filter(counts);
+const ownerOf=e=>e.type==='payment'?null:(e.createdBy||e.by||null);
+function canEdit(t,e){const me=S.me[t.id];if(!me)return false;
+  if(e.type==='payment'){const st=pstat(e);return st==='confirmed'?e.to===me:e.from===me}
+  const o=ownerOf(e);return !o||o===me}
+function lockMsg(t,e){return e&&e.type==='payment'?'🔒 这笔还款只有当事人能处理':`🔒 只有 ${e?mname(t,ownerOf(e)):'记账的人'} 能修改或删除这笔账单`}
+const pendingFor=(t,me)=>live(t).filter(e=>pstat(e)==='pending'&&e.to===me);
+const DEV=localStorage.getItem('lvzhang.dev')||(()=>{const d=uid()+uid();try{localStorage.setItem('lvzhang.dev',d)}catch{}return d})();
 
 /* ================= 渲染 ================= */
 const _heroPrev={},flashIds=new Set();let animNext=true;
@@ -413,6 +498,7 @@ function render(){
   animNext=false;
   if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
   if(flashIds.size)setTimeout(()=>flashIds.clear(),1900);
+  if(t&&view.tab==='set')renderPushBox();
   subscribe();
 }
 const avStack=(t,max=5)=>{const ms=activeM(t);return `<span class="avs">${ms.slice(0,max).map(m=>av(t,m.id)).join('')}${ms.length>max?`<span class="av" style="background:#94a3b8">+${ms.length-max}</span>`:''}</span>`};
@@ -445,14 +531,14 @@ function tripView(t){
   const dayLbl=!first?'准备出发 ✈️':dn>0?`Day ${dn}`:'即将出发 ✈️';
   let meLine='';
   if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
-  const who=me?'':`<div class="banner"><b>👋 你是谁？</b><span class="mut small"> 选一下，就能看到「你欠 / 你借出」</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
+  const who=me?'':`<div class="banner"><b>👋 你是谁？</b><span class="mut small"> 选一下，就能看到「你欠 / 你借出」</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}" style="${m.device&&m.device!==DEV?'opacity:.45':''}">${av(t,m.id)}${esc(m.name)}${m.device&&m.device!==DEV?' 🔒':''}</button>`).join('')}</div><div class="mut small" style="margin-top:6px">🔒 = 已经被别的手机认领</div></div>`;
   const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
   const un=unreadCount(t);
   const nav=[['list','🧾','账单'],['bal','⚖️','结余'],null,['stats','📊','统计'],['set','⚙️','设置']];
   return `<header class="top"><button class="icon" data-act="home" aria-label="返回">‹</button><div class="ttl">${esc(t.name)}</div>
   <button class="icon" data-act="bell" aria-label="动态">🔔${un?`<b class="badge">${un>9?'9+':un}</b>`:''}</button>
   <button class="icon" data-act="syncOut" title="邀请朋友" id="syncdot">${syncIcon(t)}</button></header>
-  <main class="wrap">${who}
+  <main class="wrap">${who}${me&&pendingFor(t,me).length?`<div class="banner" data-act="goBal" style="cursor:pointer">💸 有 <b>${pendingFor(t,me).length} 笔还款</b>等你确认收到 ›</div>`:''}
   <section class="hero">
    <div class="hero-row"><span class="stamp">${th.icon} ${dayLbl}</span><span class="greet">${greeting()}</span></div>
    <div class="lbl">大家一起花了</div>
@@ -492,7 +578,7 @@ function listItems(t){
 }
 function rowHTML(t,e,me){
   if(e.type==='payment'){
-    return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:#16a34a">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款</div></div><div class="amt"><b>${fmt(e.amount,e.currency)}</b></div></div>`;
+    return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:#16a34a">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款${pstat(e)==='pending'?' · ⏳ 等对方确认':pstat(e)==='rejected'?' · ✗ 对方说没收到':' · ✓ 已确认'}</div></div><div class="amt"><b class="${pstat(e)==='confirmed'?'':'mut'}">${fmt(e.amount,e.currency)}</b></div></div>`;
   }
   const c=cat(e.category),pids=Object.keys(e.payers);
   const payer=pids.length>1?`${pids.length} 人`:esc(mname(t,pids[0]));
@@ -512,21 +598,25 @@ function balView(t){
   const ms=t.members.filter(m=>!m.deleted||b[m.id]);
   const mx=Math.max(1,...ms.map(m=>Math.abs(b[m.id]||0)));
   const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${me===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right;flex:none">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
-  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已还 ✓</button></div>`).join('');
+  const pend=live(t).filter(e=>pstat(e)==='pending');
+  const xbtn=x=>{if(pend.some(e=>e.from===x.from&&e.to===x.to))return `<span class="mut small" style="flex:none">⏳ 待确认</span>`;
+    return x.from===me?`<button class="btn sm primary" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">我已还</button>`:x.to===me?`<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已收到</button>`:''};
+  const pendCard=pend.length?`<div class="card" style="border:1.5px solid var(--pri)"><h3>⏳ 等待确认的还款</h3>${pend.map(e=>`<div class="xfer">${av(t,e.from)}<div class="n"><b>${esc(mname(t,e.from))}</b> 说已还给 <b>${esc(mname(t,e.to))}</b><br><b>${fmt(e.amount,e.currency)}</b> <span class="mut small">${relTime(e.updatedAt||0)}</span></div>${e.to===me?`<div style="display:flex;flex-direction:column;gap:6px;flex:none"><button class="btn sm primary" data-act="payConfirm" data-id="${e.id}">✓ 确认收到</button><button class="btn sm" data-act="payReject" data-id="${e.id}">没收到</button></div>`:e.from===me?`<button class="btn sm" data-act="edit" data-id="${e.id}">等 TA 确认…</button>`:'<span class="mut small" style="flex:none">等待确认</span>'}</div>`).join('')}</div>`:'';
+  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}${xbtn(x)}</div>`).join('');
   const done=`<div class="empty" style="padding:16px"><div class="e">🎉</div><div>大家都结清了，继续玩吧！</div></div>`;
-  const tail=xs=>`${xs.length?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}<button class="btn ghost block" data-act="settle">＋ 手动记录一笔还款</button>`;
+  const tail=xs=>`${xs.length?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}<button class="btn ghost block" data-act="settle">＋ 记录一笔还款</button><p class="mut small" style="margin:4px 2px 0">💡 欠钱的人点「我已还」后，要等收钱的人点「确认收到」才算还清。</p>`;
   let how;
   if(simp){const xs=simplify(b);how=`<div class="card"><h3>💸 怎么还钱 <span class="mut small" style="font-weight:500">· 已合并成最少转账</span></h3>${xrows(xs)||done}${tail(xs)}</div>`}
   else{
     const bills=live(t).sort((a,c)=>c.date.localeCompare(a.date)||(c.createdAt||0)-(a.createdAt||0)).map(e=>{
-      if(e.type==='payment')return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>💸 还款</span><span class="mut small">${e.date.slice(5)}</span></div><div class="bl">${av(t,e.from)}<span>${esc(mname(t,e.from))}</span><span>已还给</span>${av(t,e.to)}<span>${esc(mname(t,e.to))}</span><b class="pos">${fmt(e.amount,e.currency)}</b></div></div>`;
+      if(e.type==='payment')return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>💸 还款</span><span class="mut small">${e.date.slice(5)}</span></div><div class="bl">${av(t,e.from)}<span>${esc(mname(t,e.from))}</span><span>${pstat(e)==='pending'?'说已还给':pstat(e)==='rejected'?'（没收到）':'已还给'}</span>${av(t,e.to)}<span>${esc(mname(t,e.to))}</span><b class="pos">${fmt(e.amount,e.currency)}</b></div></div>`;
       const ds=billDebts(t,e);
       return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}</span><span class="mut small">${e.date.slice(5)} · ${fmt(baseTotal(e,t),t.base)}</span></div>${ds.map(x=>`<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>`).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
     const xs=pairwise(t);
     how=`<div class="card"><h3>🧾 每笔账单谁欠谁 <span class="mut small" style="font-weight:500">· 没有合并</span></h3>${bills||'<p class="mut">还没有账单</p>'}</div>
     <div class="card"><h3>🤝 两个人之间合计</h3>${xrows(xs)||done}${tail(xs)}</div>`;
   }
-  return `<div class="card"><h3>👥 每个人的结余 <span class="mut small" style="font-weight:500">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
+  return `${pendCard}<div class="card"><h3>👥 每个人的结余 <span class="mut small" style="font-weight:500">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
   <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">${simp?'开：合并转账，让还款次数最少':'关：按每一笔账单分别显示谁欠谁'}</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
   ${how}`;
 }
@@ -568,8 +658,9 @@ function setView(t){
    ${sw('toast','朋友记账时弹出提醒','App 开着的时候，顶部弹出「谁记了什么」')}
    ${sw('sound','提示音','叮咚一声（手机静音时不响）')}
    ${sw('vibrate','震动','安卓手机有效，iPhone 网页不支持震动')}
-   <button class="btn block" data-act="testNotify">🔔 试一下提醒效果</button>
-   <p class="mut small" style="margin:6px 2px 0">右上角 🔔 是全部动态，红点数字 = 你还没看过的朋友操作。App 关着的时候不会推送，打开后在 🔔 里都能看到。</p></div>
+   <button class="btn block" data-act="testNotify">🔔 试一下 App 内提醒</button>
+   <div class="fld" style="margin-top:16px"><span>📲 锁屏推送（App 关着也能收到）</span></div><div id="push-box"><div class="mut small">检查中…</div></div>
+   <p class="mut small" style="margin:6px 2px 0">右上角 🔔 是全部动态，红点数字 = 你还没看过的朋友操作。</p></div>
   <div class="card"><h3>☁️ 同步与备份</h3>
    <button class="btn block" data-act="syncOut">${t.cloud?'🔗 邀请朋友加入':'⇅ 生成同步码 / 开启云同步'}</button>
    <button class="btn block" data-act="importSheet">📥 导入朋友的同步码</button>
@@ -701,7 +792,7 @@ function createTrip(){
   const others=$('#nt-others').value.split(/[\s,，、;；]+/).map(s=>s.trim()).filter(Boolean);
   const names=[meName,...others.filter(n=>n!==meName)];
   const t={id:uid(),name,base,theme:_nt.theme,emoji:THEME_EMOJI[_nt.theme]||'🧳',members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
-  S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
+  t.members[0].device=DEV;S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
   save();closeSheet();render();confetti();toast(sb?'出发啦 ✈️ 点右上角 ☁️ 邀请朋友':'出发啦 ✈️ 开始记账吧');
 }
 
@@ -712,7 +803,8 @@ function openEditor(id){
   const t=trip(),M=activeM(t).map(m=>m.id),me=S.me[t.id]||M[0];
   if(id){
     const e=t.expenses.find(x=>x.id===id);if(!e)return;
-    if(e.type==='payment')return openSettle({id});
+    if(e.type==='payment')return openPayment(e);
+    if(!canEdit(t,e))return openView(e);
     const c=e.currency,s=v=>v==null||v===''?'':plain(v,c),pids=Object.keys(e.payers),sp=e.split;
     ed={id,isNew:false,title:e.title,category:e.category,date:e.date,currency:c,amountStr:s(e.amount),rate:c===t.base?'':String(e.rate),
       payMode:pids.length>1?'multi':'single',payer:pids[0],payers:mapObj(e.payers,s),mode:sp.mode,
@@ -823,40 +915,99 @@ function setPath(o,p,v){const ks=p.split('.');let x=o;for(let i=0;i<ks.length-1;
 function edSave(){
   const{e:calc,err}=edCompute();if(err.length){toast(err[0]);return}
   const t=trip();
+  if(!ed.isNew){const ex=t.expenses.find(x=>x.id===ed.id);if(ex&&!canEdit(t,ex))return toast(lockMsg(t,ex))}
   const e=ed.isNew?{id:uid(),createdAt:now()}:t.expenses.find(x=>x.id===ed.id);
   for(const k of['payers','split','from','to'])delete e[k];
   Object.assign(e,calc,{title:ed.title.trim()||cat(ed.category)[2],category:ed.category,date:ed.date||today(),note:ed.note.trim(),updatedAt:now(),by:S.me[t.id]||null});
   flashIds.add(e.id);buzz();
   if(ed.receipt)e.receipt=ed.receipt;else delete e.receipt;
-  if(ed.isNew)t.expenses.push(e);
+  const wasNew=ed.isNew;
+  if(wasNew){e.createdBy=S.me[t.id]||null;t.expenses.push(e)}
   t.rates=t.rates||{};if(calc.currency!==t.base&&t.rates[calc.currency]!==calc.rate){t.rates[calc.currency]=calc.rate;t.metaAt=now()}t.lastCurrency=calc.currency;
   save();closeSheet();render();toast('已保存 ✓');
+  pushExpense(t,e,wasNew?'记了一笔':'修改了');
 }
 
-/* ================= 还款 ================= */
-function openSettle({id,from,to,amt}={}){
-  const t=trip(),M=activeM(t),e=id&&t.expenses.find(x=>x.id===id);
-  from=e?e.from:from||S.me[t.id]||M[0]?.id;to=e?e.to:to||M.find(m=>m.id!==from)?.id;amt=e?e.amount:+amt||0;
-  const opts=sel=>t.members.filter(m=>!m.deleted||m.id===sel).map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(m.name)}</option>`).join('');
-  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>${e?'编辑还款':'记录还款'}</b><button class="go" data-act="stSave" data-id="${e?e.id:''}">保存</button></div>
+/* ================= 只读账单（不是自己记的） ================= */
+function openView(e){
+  const t=trip(),me=S.me[t.id],c=e.currency,sh=sharesOf(e),owner=ownerOf(e);
+  const mine=billDebts(t,e).filter(x=>x.from===me);
+  const modeName={equal:'平均',exact:'按金额',percent:'按比例',shares:'按份数',items:'逐项'}[e.split.mode]||'';
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>账单详情</b><span style="width:44px"></span></div>
   <div class="sheet-body">
-   <div class="grid2"><label class="fld"><span>谁还钱</span><select id="st-from">${opts(from)}</select></label><label class="fld"><span>还给谁</span><select id="st-to">${opts(to)}</select></label></div>
-   <div class="amtrow"><select disabled><option>${t.base}</option></select><input class="bigamt" id="st-amt" inputmode="decimal" placeholder="0" value="${amt?plain(amt,t.base):''}"></div>
-   <label class="fld"><span>日期</span><input type="date" id="st-date" value="${e?e.date:today()}"></label>
-   <p class="mut small">💡 记录后结余会自动更新。实际转账请用微信 / 支付宝 / PayID 等完成。</p>
-   ${e?`<button class="btn danger block" data-act="stDel" data-id="${e.id}">删除这笔还款</button>`:''}</div>`);
+   <div style="text-align:center;margin:4px 0 12px"><div style="font-size:42px">${cat(e.category)[1]}</div><div style="font-size:18px;font-weight:800">${esc(e.title)}</div>
+    <div style="font-family:var(--display);font-size:36px;line-height:1.2">${fmt(e.amount,c)}</div>${c!==t.base?`<div class="mut small">≈ ${fmt(baseTotal(e,t),t.base)} · 汇率 ${e.rate}</div>`:''}
+    <div class="mut small">${e.date} · ${Object.keys(e.payers).map(p=>esc(mname(t,p))).join('、')} 付的钱</div></div>
+   <div class="banner small">🔒 这笔是 <b>${esc(mname(t,owner))}</b> 记的，只有 TA 能修改或删除。你可以查看，也可以直接还钱。</div>
+   <div class="preview"><div class="ok" style="margin-bottom:4px">每人分摊 · ${modeName}</div>${Object.keys(sh).map(id=>`<div class="pr">${av(t,id)}<span>${esc(mname(t,id))}${id===me?' <b class="neg">（我）</b>':''}</span><b>${fmt(sh[id],c)}</b></div>`).join('')}</div>
+   ${e.split.mode==='items'?`<div class="preview"><div class="mut small" style="margin-bottom:4px">品项</div>${e.split.items.map(it=>`<div class="pr"><span>${esc(it.name||'—')} <span class="mut small">${it.people.map(p=>esc(mname(t,p))).join('、')}</span></span><b>${fmt(it.amount,c)}</b></div>`).join('')}${e.split.extra?`<div class="pr"><span>税/服务费</span><b>${fmt(e.split.extra,c)}</b></div>`:''}</div>`:''}
+   ${e.note?`<p>📝 ${esc(e.note)}</p>`:''}
+   ${e.receipt?`<img src="${e.receipt}" data-act="viewImg" style="width:100%;max-height:280px;object-fit:contain;border-radius:14px;cursor:zoom-in">`:''}
+   ${mine.map(x=>`<button class="btn primary block" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">💸 还 ${esc(mname(t,x.to))} 我这份 ${fmt(x.amt,t.base)}</button>`).join('')}
+  </div>`);
 }
-function stSave(el){
-  const t=trip(),from=$('#st-from').value,to=$('#st-to').value,amount=toMinor($('#st-amt').value,t.base);
-  if(from===to)return toast('还钱的人和收钱的人不能一样');
+
+/* ================= 还款：欠钱的人说「我已还」→ 收钱的人「确认收到」才算 ================= */
+let stS=null;
+const suggestAmt=(t,from,to)=>((t.simplify!==false?simplify(balances(t)):pairwise(t)).find(x=>x.from===from&&x.to===to)||{}).amt||0;
+function openSettle({id,from,to,amt}={}){
+  const t=trip(),me=S.me[t.id];
+  if(!me){toast('👋 先在上面选一下你是谁');return}
+  if(id){const e=t.expenses.find(x=>x.id===id);if(e)return openPayment(e)}
+  if(from&&to&&from!==me&&to!==me)return toast('🔒 只有欠钱或收钱的本人才能记录这笔还款');
+  const mode=to===me?'recv':'pay';
+  const others=activeM(t).filter(m=>m.id!==me).map(m=>m.id);
+  let other=mode==='pay'?(to||others.find(o=>suggestAmt(t,me,o))||others[0]):(from||others.find(o=>suggestAmt(t,o,me))||others[0]);
+  stS={mode,other,amt:+amt||(mode==='pay'?suggestAmt(t,me,other):suggestAmt(t,other,me))};
+  renderSettle();
+}
+function renderSettle(){
+  const t=trip(),me=S.me[t.id],m=stS.mode;
+  const opts=activeM(t).filter(x=>x.id!==me).map(x=>`<option value="${x.id}" ${x.id===stS.other?'selected':''}>${esc(x.name)}</option>`).join('');
+  const html=`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>记录还款</b><button class="go" data-act="stSave">${m==='pay'?'我已还':'确认收到'}</button></div>
+  <div class="sheet-body">
+   <div class="seg" style="margin-top:0"><button class="${m==='pay'?'on':''}" data-act="stMode" data-m="pay">💸 我还钱给别人</button><button class="${m==='recv'?'on':''}" data-act="stMode" data-m="recv">💰 别人还我钱</button></div>
+   <label class="fld"><span>${m==='pay'?'还给谁':'谁还给我'}</span><select id="st-other">${opts}</select></label>
+   <div class="amtrow"><select disabled><option>${t.base}</option></select><input class="bigamt" id="st-amt" inputmode="decimal" placeholder="0" value="${stS.amt?plain(stS.amt,t.base):''}"></div>
+   <label class="fld"><span>日期</span><input type="date" id="st-date" value="${today()}"></label>
+   <div class="banner small">${m==='pay'?'⏳ 保存后会通知对方，<b>等 TA 点「确认收到」才算还清</b>。实际转账请用微信 / 支付宝 / PayID 完成。':'✓ 你自己确认收到钱，马上算还清，并通知对方。'}</div></div>`;
+  if($('#sheet'))$('#sheet').innerHTML=html;else openSheet(html);
+}
+function stSave(){
+  const t=trip(),me=S.me[t.id],other=$('#st-other').value,amount=toMinor($('#st-amt').value,t.base);
+  if(!other)return toast('选一下对方');
   if(!(amount>0))return toast('请输入金额');
-  const id=el.dataset.id;const e=id?t.expenses.find(x=>x.id===id):{id:uid(),createdAt:now()};
+  const pay=stS.mode==='pay',from=pay?me:other,to=pay?other:me;
   const before=Object.values(balances(t)).some(v=>v);
-  Object.assign(e,{type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:S.me[t.id]||null});
-  if(!id)t.expenses.push(e);
-  flashIds.add(e.id);buzz();
+  const e={id:uid(),createdAt:now(),type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:me,createdBy:me,status:pay?'pending':'confirmed'};
+  if(!pay)e.confirmedAt=now();
+  t.expenses.push(e);flashIds.add(e.id);buzz();
   save();closeSheet();render();
-  if(before&&!Object.values(balances(t)).some(v=>v)){confetti();buzz([20,60,20]);toast('🎉 全部结清！')}else toast('已记录还款 ✓');
+  if(pay){toast(`⏳ 已通知 ${mname(t,to)}，等 TA 确认收到`);pushTo(t,[to],`💸 ${mname(t,me)} 还你钱啦`,`${mname(t,me)} 说已还你 ${fmt(amount,t.base)}，点开确认一下有没有收到`,`?trip=${t.id}&tab=bal`,e.id)}
+  else{celebrate(t,before,'已确认收到 ✓');pushTo(t,[from],'✅ 还款已确认',`${mname(t,me)} 确认收到了你的 ${fmt(amount,t.base)}`,`?trip=${t.id}&tab=bal`,e.id)}
+}
+function celebrate(t,before,msg){if(before&&!Object.values(balances(t)).some(v=>v)){confetti();buzz([20,60,20]);toast('🎉 全部结清！')}else toast(msg)}
+function openPayment(e){
+  const t=trip(),me=S.me[t.id],st=pstat(e);
+  const label={pending:'⏳ 等待确认',confirmed:'✓ 已确认收到',rejected:'✗ 对方说没收到'}[st];
+  let btns='';
+  if(st==='pending'&&e.to===me)btns=`<button class="btn primary block" data-act="payConfirm" data-id="${e.id}">✓ 确认收到 ${fmt(e.amount,e.currency)}</button><button class="btn block" data-act="payReject" data-id="${e.id}">✗ 没收到</button>`;
+  else if(st==='pending'&&e.from===me)btns=`<button class="btn block" data-act="payRemind" data-id="${e.id}">🔔 再提醒 TA 一下</button><button class="btn danger block" data-act="stDel" data-id="${e.id}">撤回这笔还款</button>`;
+  else if(st==='rejected'&&e.from===me)btns=`<button class="btn primary block" data-act="payRemind" data-id="${e.id}">我确实还了，请 TA 再确认</button><button class="btn danger block" data-act="stDel" data-id="${e.id}">删除这笔还款</button>`;
+  else if(st==='confirmed'&&e.to===me)btns=`<button class="btn danger block" data-act="stDel" data-id="${e.id}">撤销（其实没收到）</button>`;
+  else btns=`<p class="mut small" style="text-align:center">🔒 只有 ${esc(mname(t,e.from))} 和 ${esc(mname(t,e.to))} 能处理这笔还款</p>`;
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>还款</b><span style="width:44px"></span></div>
+  <div class="sheet-body"><div style="text-align:center;margin:8px 0 14px">
+   <div style="display:flex;align-items:center;justify-content:center;gap:10px">${av(t,e.from,'lg')}<span style="font-size:22px">→</span>${av(t,e.to,'lg')}</div>
+   <div style="margin-top:8px"><b>${esc(mname(t,e.from))}</b> 还给 <b>${esc(mname(t,e.to))}</b></div>
+   <div style="font-family:var(--display);font-size:38px;line-height:1.2">${fmt(e.amount,e.currency)}</div>
+   <div class="mut small">${e.date} · ${label}</div></div>${btns}</div>`);
+}
+function setPay(id,status){
+  const t=trip(),me=S.me[t.id],e=t.expenses.find(x=>x.id===id);if(!e)return null;
+  const before=Object.values(balances(t)).some(v=>v);
+  e.status=status;e.updatedAt=now();e.by=me;if(status==='confirmed')e.confirmedAt=now();
+  flashIds.add(e.id);save();closeSheet();render();return{t,e,before};
 }
 
 /* ================= 同步（同步码 / 链接 / 文件） ================= */
@@ -941,7 +1092,7 @@ function exportCSV(){
   const t=trip(),ms=t.members.filter(m=>!m.deleted||live(t).some(e=>involves(e,m.id)));
   const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const head=['日期','项目','类别','币种','金额','汇率',`折合${t.base}`,'付款人',...ms.map(m=>m.name+' 分摊'),'备注'];
-  const rows=live(t).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{const{T,owed}=baseSplit(e,t);const p=payersOf(e);
+  const rows=eff(t).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{const{T,owed}=baseSplit(e,t);const p=payersOf(e);
     return[e.date,e.type==='payment'?`还款 ${mname(t,e.from)}→${mname(t,e.to)}`:e.title,e.type==='payment'?'还款':cat(e.category)[2],e.currency,plain(e.amount,e.currency),e.rate,plain(T,t.base),
       Object.keys(p).map(k=>mname(t,k)+(Object.keys(p).length>1?`(${plain(p[k],e.currency)})`:'')).join(' '),...ms.map(m=>owed[m.id]?plain(owed[m.id],t.base):''),e.note||''].map(q).join(',')});
   const b=balances(t);
@@ -957,28 +1108,31 @@ function summaryText(t){
 
 function deleteExpense(id){
   const t=trip(),e=t&&t.expenses.find(x=>x.id===id);if(!e)return;
+  if(!canEdit(t,e))return toast(lockMsg(t,e));
+  if(e.type==='payment')pushTo(t,[e.from,e.to],'💸 还款撤回',`${mname(t,S.me[t.id])} 撤回了 ${mname(t,e.from)} → ${mname(t,e.to)} 的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id);
+  else pushExpense(t,e,'删除了');
   e.deleted=true;e.updatedAt=now();e.by=S.me[t.id]||null;save();render();buzz(20);
   toast(`已删除「${e.type==='payment'?'还款':e.title}」`,()=>{e.deleted=false;e.updatedAt=now();flashIds.add(e.id);save();render()});
 }
 function openMember(id){
   const t=trip(),b=balances(t)[id]||0;let paid=0,owe=0;
-  const rows=live(t).filter(e=>involves(e,id)).sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{const s=baseSplit(e,t),p=s.paid[id]||0,o=s.owed[id]||0;paid+=p;owe+=o;
+  const rows=eff(t).filter(e=>involves(e,id)).sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{const s=baseSplit(e,t),p=s.paid[id]||0,o=s.owed[id]||0;paid+=p;owe+=o;
     const title=e.type==='payment'?`💸 ${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}`:`${cat(e.category)[1]} ${esc(e.title)}`;
     return `<div class="row" data-act="memberEdit" data-id="${e.id}"><div class="mid"><div class="t">${title}</div><div class="s">${e.date}${p?' · 付了 '+fmt(p,t.base):''}${o?' · 分摊 '+fmt(o,t.base):''}</div></div><div class="amt"><b class="${p-o>0?'pos':p-o<0?'neg':'mut'}">${p-o>0?'+':''}${fmt(p-o,t.base)}</b></div></div>`}).join('');
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>${esc(mname(t,id))}</b><span style="width:40px"></span></div>
   <div class="sheet-body"><div style="text-align:center">${av(t,id,'lg')}<div style="font-size:26px;font-weight:800;margin-top:6px" class="${b>0?'pos':b<0?'neg':'mut'}">${b>0?'应收 '+fmt(b,t.base):b<0?'应付 '+fmt(-b,t.base):'已结清'}</div></div>
   <div class="stat4" style="margin:14px 0"><div><span class="mut small">一共垫付</span><b>${fmt(paid,t.base)}</b></div><div><span class="mut small">自己消费</span><b>${fmt(owe,t.base)}</b></div></div>
-  ${b<0?`<button class="btn primary block" data-act="settle" data-from="${id}" data-to="${(simplify(balances(t)).find(x=>x.from===id)||{}).to||''}" data-amt="${(simplify(balances(t)).find(x=>x.from===id)||{}).amt||-b}">💸 TA 来还钱</button>`:''}
+  ${(()=>{const me=S.me[t.id],x=simplify(balances(t)).find(x=>(x.from===id&&x.to===me)||(x.to===id&&x.from===me)||(id===me&&x.from===me));if(!x)return'';return `<button class="btn primary block" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">${x.from===me?'💸 我去还 '+esc(mname(t,x.to))+' '+fmt(x.amt,t.base):'💰 '+esc(mname(t,x.from))+' 还我了 '+fmt(x.amt,t.base)}</button>`})()}
   <div class="list">${rows||'<p class="mut" style="padding:12px">还没有相关账单</p>'}</div></div>`);
 }
 function feedView(t){
   const ev=[...t.expenses].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,100);
   if(!ev.length)return `<div class="empty"><div class="e">🔔</div><p>大家记账、修改、删除都会出现在这里</p></div>`;
   const seen=S._seenBefore??0;
-  return `<div class="card"><h3>🔔 动态 <span class="mut small" style="font-weight:500">· 大家最近做了什么</span></h3>${ev.map(e=>{const who=e.by?esc(mname(t,e.by)):'有人',act=e.deleted?'删除了':((e.updatedAt||0)-(e.createdAt||0)<3000?'添加了':'修改了');
-    const what=e.type==='payment'?`${esc(mname(t,e.from))} → ${esc(mname(t,e.to))} 的还款`:`「${esc(e.title)}」`;
+  return `<div class="card"><h3>🔔 动态 <span class="mut small" style="font-weight:500">· 大家最近做了什么</span></h3>${ev.map(e=>{const who=e.by?esc(mname(t,e.by)):'有人',ps=pstat(e),act=e.deleted?'删除了':e.type==='payment'?'':((e.updatedAt||0)-(e.createdAt||0)<3000?'添加了':'修改了');
+    const what=e.type==='payment'?(e.deleted?`${esc(mname(t,e.from))} → ${esc(mname(t,e.to))} 的还款`:ps==='pending'?`说已还给 ${esc(mname(t,e.to))}`:ps==='rejected'?`说没收到 ${esc(mname(t,e.from))} 的还款`:e.by===e.to?`确认收到 ${esc(mname(t,e.from))} 的还款`:`还给了 ${esc(mname(t,e.to))}`):`「${esc(e.title)}」`;
     return `<div class="feed">${e.by?av(t,e.by):'<span class="av" style="background:#999">?</span>'}<div class="tx"><b>${who}</b> ${act} ${what} <b>${fmt(e.amount,e.currency)}</b><div class="mut">${relTime(e.updatedAt||0)}</div></div>
-    ${e.deleted?`<button class="btn sm" data-act="restore" data-id="${e.id}">恢复</button>`:`<button class="btn sm" data-act="edit" data-id="${e.id}">查看</button>`}</div>`}).join('')}</div>`;
+    ${e.deleted?(canEdit(t,e)?`<button class="btn sm" data-act="restore" data-id="${e.id}">恢复</button>`:''):`<button class="btn sm" data-act="edit" data-id="${e.id}">查看</button>`}</div>`}).join('')}</div>`;
 }
 
 /* ================= 事件 ================= */
@@ -992,8 +1146,19 @@ const ACT={
   ntTheme(el){_nt.theme=el.dataset.k;document.querySelectorAll('#nt-themes .th').forEach(b=>b.classList.toggle('on',b===el));const th=THEMES[_nt.theme]||THEMES.mountain,rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1])},
   testNotify(){const t=trip(),o=activeM(t).find(m=>m.id!==S.me[t.id])||activeM(t)[0];notify(`🔔 ${o?o.name:'朋友'} 记了一笔：拉面 ${fmt(toMinor(980,'JPY'),'JPY')}`);if(!S.prefs.toast)toast('（弹出提醒已关闭）')},
   fcat(el){view.cat=el.dataset.c;animNext=true;render()},
-  setMe(el){S.me[S.cur]=el.dataset.id;persist();render()},
-  add(){openEditor(null)},
+  setMe(el){const t=trip(),m=mem(t,el.dataset.id);if(!m)return;
+    if(m.device&&m.device!==DEV&&!confirm(`「${m.name}」已经在另一台手机上被认领了。\n只有你本人换了手机才选这个，确定是你吗？`))return;
+    const old=S.me[t.id]&&mem(t,S.me[t.id]);if(old&&old.id!==m.id&&old.device===DEV){old.device=null;old.updatedAt=now()}
+    m.device=DEV;m.updatedAt=now();S.me[t.id]=m.id;save();render();pushSyncMe()},
+  add(){const t=trip();if(!S.me[t.id]){toast('👋 先在上面选一下你是谁');scrollTo({top:0,behavior:'smooth'});return}openEditor(null)},
+  goBal(){view.tab='bal';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
+  stMode(el){stS.mode=el.dataset.m;const t=trip(),me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,stS.other):suggestAmt(t,stS.other,me);renderSettle()},
+  payConfirm(el){const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
+  payReject(el){if(!confirm('确定没收到这笔钱？会通知对方。'))return;const r=setPay(el.dataset.id,'rejected');if(!r)return;const{t,e}=r;toast('已告诉对方没收到');pushTo(t,[e.from],'✗ 对方说没收到',`${mname(t,e.to)} 说没收到你的 ${fmt(e.amount,e.currency)}，确认一下转账`,`?trip=${t.id}&tab=bal`,e.id)},
+  payRemind(el){const r=setPay(el.dataset.id,'pending');if(!r)return;const{t,e}=r;toast(`🔔 已再次提醒 ${mname(t,e.to)}`);pushTo(t,[e.to],`💸 ${mname(t,e.from)} 提醒你确认还款`,`${mname(t,e.from)} 说已还你 ${fmt(e.amount,e.currency)}，点开确认一下`,`?trip=${t.id}&tab=bal`,e.id)},
+  async pushOn(){await pushEnable();renderPushBox()},
+  async pushTest(){await pushTest()},
+  async pushReset(){await pushReset();renderPushBox()},
   edit(el){openEditor(el.dataset.id)},
   closeSheet,
   edCat(el){ed.category=el.dataset.c;document.querySelectorAll('[data-act="edCat"]').forEach(b=>b.classList.toggle('on',b===el))},
@@ -1018,7 +1183,7 @@ const ACT={
   statCat(el){view.tab='list';view.cat=el.dataset.c;view.q='';animNext=true;render();scrollTo(0,0)},
   scanItems(){applyScanItems();renderEditor()},
   rescan(el){if(ed&&ed.scanFile)scanReceipt(ed.scanFile,el.dataset.l)},
-  restore(el){const t=trip(),e=t.expenses.find(x=>x.id===el.dataset.id);if(!e)return;e.deleted=false;e.updatedAt=now();e.by=S.me[t.id]||null;flashIds.add(e.id);save();render();toast('已恢复「'+e.title+'」')},
+  restore(el){const t=trip(),e=t.expenses.find(x=>x.id===el.dataset.id);if(!e)return;if(!canEdit(t,e))return toast(lockMsg(t,e));e.deleted=false;e.updatedAt=now();e.by=S.me[t.id]||null;flashIds.add(e.id);save();render();toast('已恢复「'+e.title+'」')},
   settle(el){closeSheet();openSettle({from:el.dataset.from,to:el.dataset.to||undefined,amt:el.dataset.amt})},
   memberEdit(el){closeSheet();openEditor(el.dataset.id)},
   stSave,
@@ -1059,7 +1224,7 @@ document.addEventListener('touchmove',e=>{const x=e.touches[0];
   if(sh){sh.dy=Math.max(0,x.clientY-sh.y);if(sh.el){sh.el.style.transition='none';sh.el.style.transform=`translateY(${sh.dy}px)`}}
 },{passive:true});
 document.addEventListener('touchend',async()=>{
-  if(sw){const{r,dx,lock}=sw;sw=null;r.style.transition='';if(lock==='x'){swipeBlock=Date.now();if(dx<-90){r.style.transform='translateX(-110%)';setTimeout(()=>deleteExpense(r.dataset.id),200)}else{r.style.transform='';const pe=r.parentElement;pe.classList.remove('arm');setTimeout(()=>pe.classList.remove('swiping'),230)}}}
+  if(sw){const{r,dx,lock}=sw;sw=null;r.style.transition='';if(lock==='x'){swipeBlock=Date.now();const tt=trip(),ex=tt&&tt.expenses.find(x=>x.id===r.dataset.id),ok=ex&&canEdit(tt,ex);if(dx<-90&&ok){r.style.transform='translateX(-110%)';setTimeout(()=>deleteExpense(r.dataset.id),200)}else{if(dx<-90)toast(lockMsg(tt,ex));r.style.transform='';const pe=r.parentElement;pe.classList.remove('arm');setTimeout(()=>pe.classList.remove('swiping'),230)}}}
   if(sh){const{dy,el}=sh;sh=null;if(el){el.style.transition='';if(dy>100){el.style.transform='translateY(100%)';setTimeout(closeSheet,180)}else el.style.transform=''}}
   if(pt){const dy=pt.dy;pt=null;const el=$('#ptr');if(!el)return;
     if(dy>70){el.textContent='⏳ 刷新中…';buzz();const t=trip();if(t&&t.cloud&&sb)await refreshCurrent();else render();toast(t&&t.cloud?'☁️ 已是最新':'已刷新（本机账本）')}
@@ -1075,7 +1240,8 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
     else if(el.dataset.f==='payer'){if(el.value==='__multi'){ed.payMode='multi';if(!Object.keys(ed.payers).length&&ed.amountStr)ed.payers={[ed.payer]:ed.amountStr}}else{ed.payMode='single';ed.payer=el.value}renderEditor()}
   }
   if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
-  if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];openEditor(null);scanReceipt(f)}
+  if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];el.value='';if(!S.me[t.id])return toast('👋 先在上面选一下你是谁');openEditor(null);scanReceipt(f)}
+  if(el.id==='st-other'&&stS){stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);const a=$('#st-amt');if(a)a.value=stS.amt?plain(stS.amt,t.base):''}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
   if(el.dataset.ts&&t){const k=el.dataset.ts;
@@ -1094,8 +1260,9 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='ne
   const h=location.hash;
   if(h.startsWith('#sync=')){history.replaceState(null,'',location.pathname+location.search);render();await doImport(decodeURIComponent(h.slice(6)));}
   else if(h.startsWith('#join=')){history.replaceState(null,'',location.pathname+location.search);render();await joinTrip(h.slice(6));}
-  else{render();refreshCurrent()}
-  flush();
+  else{const q=location.search;if(q)history.replaceState(null,'',location.pathname);if(!openFromUrl(q)){render();refreshCurrent()}}
+  flush();pushSyncMe();
+  navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',ev=>{if(ev.data&&ev.data.open!=null)openFromUrl(ev.data.open.replace(/^\.?\/?/,''))});
   addEventListener('online',()=>{refreshCurrent();flush()});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshCurrent()});
   setInterval(()=>{if(pendingRows().length)flush()},30000);
