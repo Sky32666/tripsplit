@@ -13,8 +13,8 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>旅账 · 旅行 AA 记账</title>
 <style>
-:root{--bg:#eef2ee;--card:#ffffff;--ink:#1f2a27;--mut:#64716c;--line:#d6dfda;--pri:#2f6b5a;--pri2:#6f957f;--pos:#2f7d55;--neg:#c8643b;--chip:#e3ece7;--soft:#d9e8e1;--display:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB",sans-serif;--r:20px;--sh:0 1px 2px rgba(31,42,39,.04),0 4px 16px rgba(31,42,39,.06)}
-@media (prefers-color-scheme:dark){:root{--bg:#141b19;--card:#1d2724;--ink:#e6eeea;--mut:#97a6a0;--line:#2d3a36;--chip:#24312d;--soft:#24392f;--pos:#7cc4a8;--neg:#e9a25f;--sh:none;color-scheme:dark}}
+:root{--pri:#2f6b5a;--pri2:#6f957f;--bg:var(--tbg,#eef2ee);--card:#ffffff;--ink:color-mix(in srgb,var(--pri) 28%,#141614);--mut:color-mix(in srgb,var(--pri) 32%,#6a6e6c);--line:color-mix(in srgb,var(--pri) 15%,var(--bg));--chip:color-mix(in srgb,var(--pri) 8%,var(--bg));--soft:color-mix(in srgb,var(--pri) 15%,#ffffff);--acc:var(--pri);--pos:#2f7d55;--neg:#c8643b;--display:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB",sans-serif;--r:20px;--sh:0 1px 2px rgba(31,42,39,.04),0 4px 16px rgba(31,42,39,.06)}
+@media (prefers-color-scheme:dark){:root{--bg:color-mix(in srgb,var(--pri) 16%,#0d0f0e);--card:color-mix(in srgb,var(--pri) 14%,#181a19);--ink:color-mix(in srgb,var(--pri2) 12%,#eef1ef);--mut:color-mix(in srgb,var(--pri2) 35%,#8f9592);--line:color-mix(in srgb,var(--pri) 25%,#2a2d2b);--chip:color-mix(in srgb,var(--pri) 20%,#202321);--soft:color-mix(in srgb,var(--pri) 32%,#1a1d1b);--acc:color-mix(in srgb,var(--pri2) 75%,#ffffff);--pos:#7cc4a8;--neg:#e9a25f;--sh:none;color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{font:15px/1.55 "Noto Sans SC","PingFang SC","Hiragino Sans GB","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-text-size-adjust:100%}
@@ -68,7 +68,7 @@ button{cursor:pointer}
 .bnav{position:fixed;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:flex-end;justify-content:space-around;max-width:560px;margin:0 auto;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);background:color-mix(in srgb,var(--card) 90%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line);border-radius:22px 22px 0 0;box-shadow:0 -8px 26px rgba(60,40,10,.07)}
 .bnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0 2px;color:var(--mut);font-size:11.5px;font-weight:700}
 .bnav i{font-style:normal;font-size:21px;line-height:1.2;filter:grayscale(.85);opacity:.65;transition:transform .25s cubic-bezier(.2,1.4,.4,1),filter .2s,opacity .2s}
-.bnav .on{color:var(--pri)}.bnav .on i{filter:none;opacity:1;transform:translateY(-3px) scale(1.15)}
+.bnav .on{color:var(--acc)}.bnav .on i{filter:none;opacity:1;transform:translateY(-3px) scale(1.15)}
 .bnav .plus{flex:none;width:58px;height:58px;margin:-28px 4px 4px;border-radius:20px;background:linear-gradient(160deg,var(--pri2),var(--pri));color:#fff;font-size:30px;font-weight:400;box-shadow:0 10px 24px color-mix(in srgb,var(--pri) 45%,transparent);justify-content:center;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
 /* 列表 */
@@ -88,7 +88,7 @@ button{cursor:pointer}
 .sw-bg{position:absolute;inset:0;padding-right:18px;justify-content:flex-end;background:#ef4444;opacity:0;display:flex;align-items:center;color:#fff;font-weight:700;font-size:14px}
 .sw.swiping .sw-bg{opacity:1}.sw.arm .sw-bg{font-size:16px}
 .sw>.row{position:relative;background:var(--card);transition:transform .22s cubic-bezier(.2,.9,.3,1)}
-.row .ico{width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--cc,#64748b) 17%,var(--card));display:grid;place-items:center;font-size:21px;flex:none}
+.row .ico{width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--cc,#64748b) 9%,var(--soft));display:grid;place-items:center;font-size:21px;flex:none}
 .row .mid{flex:1;min-width:0}
 .row .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .s{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -253,8 +253,11 @@ const CUR=['CNY','USD','EUR','JPY','KRW','HKD','TWD','MOP','SGD','MYR','THB','VN
 const CURNAME={CNY:'人民币',USD:'美元',EUR:'欧元',JPY:'日元',KRW:'韩元',HKD:'港币',TWD:'新台币',MOP:'澳门元',SGD:'新加坡元',MYR:'马币',THB:'泰铢',VND:'越南盾',IDR:'印尼盾',PHP:'菲律宾比索',AUD:'澳元',NZD:'纽币',GBP:'英镑',CAD:'加元',CHF:'瑞郎'};
 const COLORS=['#2f6b5a','#b8733a','#6b5b95','#3f6f8f','#a0525e','#5f7f3a','#8a6a3b','#2f5d6b','#7a4f6b','#4a5551','#9a5b2c','#55703a'];
 const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸','🏖️','🎡','🗼','⛩️','🐫','🚢'];
-const THEMES={mountain:{name:'旅途',icon:'✈️',c:['#2f6b5a','#6f957f']},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae']},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62']},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a']},
-  sea:{name:'海边',icon:'🏖️',c:['#2c6470','#86b3b0']},tea:{name:'抹茶',icon:'🍵',c:['#55703a','#a3b98a']},sand:{name:'沙丘',icon:'🐫',c:['#8a6a3b','#c9ac7c']},stone:{name:'石板',icon:'🪨',c:['#4a5551','#8d9a95']}};
+const THEMES={mountain:{name:'旅途',icon:'✈️',c:['#2f6b5a','#6f957f'],bg:'#eef2ee'},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae'],bg:'#ebf1f3'},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62'],bg:'#f6efe7'},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a'],bg:'#eceff3'},
+  sea:{name:'海边',icon:'🏖️',c:['#2c6470','#86b3b0'],bg:'#eaf3f2'},tea:{name:'抹茶',icon:'🍵',c:['#55703a','#a3b98a'],bg:'#f0f3e8'},sand:{name:'沙丘',icon:'🐫',c:['#8a6a3b','#c9ac7c'],bg:'#f5f0e6'},stone:{name:'石板',icon:'🪨',c:['#4a5551','#8d9a95'],bg:'#eff0ef'}};
+function applyTheme(th){const rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1]);rs.setProperty('--tbg',th.bg);
+  const dark=matchMedia('(prefers-color-scheme: dark)').matches,mc=document.querySelector('meta[name=theme-color]');if(mc)mc.content=dark?getComputedStyle(document.body||document.documentElement).backgroundColor||th.bg:th.bg}
+const tripStart=t=>t.start||live(t).filter(e=>e.type!=='payment').map(e=>e.date).sort()[0]||null;
 const tEmoji=t=>!t.emoji||t.emoji==='⛰️'?'🧳':t.emoji;
 const theme=t=>THEMES[typeof S!=='undefined'&&S.prefs&&S.prefs.theme]||THEMES.mountain;
 const themesHTML=(cur,act)=>Object.entries(THEMES).map(([k,v])=>`<button class="th ${cur===k?'on':''}" style="--a:${v.c[0]};--b:${v.c[1]}" data-act="${act}" data-k="${k}">${v.icon}<br>${v.name}</button>`).join('');
@@ -286,7 +289,7 @@ const cloudOn=!!(CFG.supabaseUrl&&CFG.supabaseKey&&window.supabase&&!/YOUR_/.tes
 let sb=null;try{if(cloudOn)sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey)}catch(e){console.warn(e)}
 let syncState='ok',flushTimer=null,flushing=false,chan=null,chanKey='';
 function rowsOf(t){
-  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,code:t.code,pw:t.pw,owner:t.owner,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
+  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,start:t.start,emoji:t.emoji,code:t.code,pw:t.pw,owner:t.owner,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
   t.members.forEach(m=>rows.push({id:m.id,trip_id:t.id,kind:'member',data:m,updated_at:m.updatedAt||0}));
   t.expenses.forEach(e=>rows.push({id:e.id,trip_id:t.id,kind:'expense',data:e,updated_at:e.updatedAt||0}));
   return rows;
@@ -527,7 +530,7 @@ const DEV=localStorage.getItem('lvzhang.dev')||(()=>{const d=uid()+uid();try{loc
 const _heroPrev={},flashIds=new Set();let animNext=true;
 function render(){
   const t=trip();
-  const th=theme(t),rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1]);
+  applyTheme(theme(t));
   
   $('#app').innerHTML=t?tripView(t):homeView();
   animNext=false;
@@ -564,8 +567,8 @@ function tripView(t){
   if(view.tab==='feed'){S.seen[t.id]=now();persist()}
   const ex=live(t).filter(e=>e.type!=='payment');
   const total=ex.reduce((a,e)=>a+baseTotal(e,t),0),n=activeM(t).length||1;
-  const first=ex.map(e=>e.date).sort()[0],dn=first?dayDiff(first,today())+1:0;
-  const dayLbl=!first?'准备出发 ✈️':dn>0?`Day ${dn}`:'即将出发 ✈️';
+  const first=tripStart(t),dn=first?dayDiff(first,today())+1:0;
+  const dayLbl=!first?'准备出发 ✈️':dn>1?`Day ${dn}`:dn===1?'Day 1 出发啦':dn===0?'明天出发 ✈️':`还有 ${-dn+1} 天出发`;
   let meLine='';
   if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span data-act="avatar" style="display:flex;align-items:center;gap:6px;cursor:pointer">${av(t,me)}${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
   const who=me?'':`<div class="banner" data-act="who" style="cursor:pointer">👋 <b>先选一下你是谁</b>，才能记账和还钱 ›</div>`;
@@ -606,11 +609,11 @@ function listItems(t){
   if(!ex.length)return `<div class="empty"><div class="e">🔍</div><p>没有找到匹配的账单</p></div>`;
   ex.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
   const groups={};ex.forEach(e=>(groups[e.date]=groups[e.date]||[]).push(e));
-  const first=live(t).filter(e=>e.type!=='payment').map(e=>e.date).sort()[0];
+  const first=tripStart(t);
   return Object.entries(groups).map(([d,arr])=>{
     const dt=new Date(d+'T00:00');const wd='日一二三四五六'[dt.getDay()];
     const dayTotal=arr.filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
-    return `<div class="dayh"><span>${first&&d>=first?`<b>Day ${dayDiff(first,d)+1}</b> · `:''}${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
+    return `<div class="dayh"><span>${first?(d>=first?`<b>Day ${dayDiff(first,d)+1}</b> · `:'<b>出发前</b> · '):''}${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
   }).join('');
 }
 function rowHTML(t,e,me){
@@ -687,6 +690,7 @@ function setView(t){
    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div class="mut small">房间码</div><div style="font-family:var(--display);font-size:30px;letter-spacing:4px">${esc(t.code||'——')}</div></div><button class="btn primary" data-act="invite">邀请朋友</button></div>
    ${isOwner?`<div class="mem" style="margin-top:10px"><input id="newPw" type="text" placeholder="${t.pw?'改密码（至少 4 位）':'设一个密码（至少 4 位）'}" autocomplete="off"><button class="btn sm" data-act="setPw">保存</button></div>`:''}
    <label class="fld"><span>旅行名称</span><input data-ts="name" value="${esc(t.name)}"></label>
+   <label class="fld"><span>出发日期（Day 1；之前的账单算「出发前」）</span><input type="date" data-ts="start" value="${t.start||''}"></label>
    <label class="fld"><span>结算币种 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
   <div class="card"><h3>👥 成员</h3>${me?`<button class="btn block" data-act="avatar" style="margin-top:0">${av(t,me)} 换我的头像</button>`:''}${ms}
    <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember">添加</button></div></div>
@@ -812,6 +816,7 @@ function openNewTrip(){
    <label class="fld"><span>房间密码（朋友加入时要输入，至少 4 位）</span><input id="nt-pw" type="text" autocomplete="off" placeholder="例如：8888"></label>
    <label class="fld"><span>你的名字</span><input id="nt-me" placeholder="我"></label>
    <label class="fld"><span>一起去的朋友（空格或逗号隔开，可以之后再加）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
+   <label class="fld"><span>出发日期</span><input id="nt-start" type="date" value="${today()}"></label>
    <label class="fld"><span>结算币种</span><select id="nt-base">${CUR.map(c=>`<option value="${c}">${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>`);
 }
 async function createTrip(){
@@ -824,7 +829,7 @@ async function createTrip(){
   const code=await newCode();
   const members=names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()}));
   members[0].device=DEV;
-  const t={id:uid(),name,base,emoji:'🧳',code,pw:await hashPw(code,pw),owner:members[0].id,members,expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
+  const t={id:uid(),name,base,start:$('#nt-start').value||today(),emoji:'🧳',code,pw:await hashPw(code,pw),owner:members[0].id,members,expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
   S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=members[0].id;S.pw[t.id]=pw;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
   save();closeSheet();render();confetti();openInvite();
 }
@@ -1113,7 +1118,7 @@ function mergeTrip(inc){
   const loc=S.trips[inc.id];
   if(!loc){S.trips[inc.id]=inc;if(!S.order.includes(inc.id))S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
   if(inc.cloud)loc.cloud=true;
-  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','code','pw','owner','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
+  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','start','emoji','code','pw','owner','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
   for(const m of inc.members){const lm=mem(loc,m.id);if(!lm)loc.members.push(m);else if((m.updatedAt||0)>(lm.updatedAt||0))Object.assign(lm,m)}
   let added=0,updated=0;
   for(const e of inc.expenses){const le=loc.expenses.find(x=>x.id===e.id);
@@ -1368,6 +1373,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
   if(el.dataset.ts&&t){const k=el.dataset.ts;
     if(k==='name'){t.name=el.value.trim()||t.name;t.metaAt=now()}
+    if(k==='start'){t.start=el.value||null;t.metaAt=now()}
     if(k==='base'){t.base=el.value;t.metaAt=now()}
     if(k==='simplify'){t.simplify=el.checked;t.metaAt=now()}
     if(k==='mname'){const m=mem(t,el.dataset.id);m.name=el.value.trim()||m.name;m.updatedAt=now()}
