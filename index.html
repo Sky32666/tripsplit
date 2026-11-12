@@ -43,14 +43,44 @@ button{cursor:pointer}
 .tripc .mid{flex:1;min-width:0}.tripc b{display:block;font-size:16px}
 .search{display:flex;gap:8px;margin:12px 0 6px}
 .search input{flex:1;border:0;background:var(--card);box-shadow:var(--sh);border-radius:12px;padding:10px 12px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
+.chips{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:0;background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13.5px;white-space:nowrap}
 .chip.on{background:var(--pri);color:#fff}
 .dayh{display:flex;justify-content:space-between;margin:16px 4px 6px;font-size:13px;color:var(--mut);font-weight:600}
 .list{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
 .row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
-.row:last-child{border-bottom:0}
+.sw:last-child>.row{border-bottom:0}
+.sw{position:relative;overflow:hidden}
+.sw-bg{position:absolute;inset:0;padding-right:18px;justify-content:flex-end;background:#dc2626;opacity:0;display:flex;align-items:center;color:#fff;font-weight:700;font-size:14px;transition:transform .15s}
+.sw.swiping .sw-bg{opacity:1}.sw.arm .sw-bg{font-size:16px}
+.sw>.row{position:relative;background:var(--card);transition:transform .22s cubic-bezier(.2,.9,.3,1)}
+.anim .sw,.anim .dayh{animation:rowIn .35s cubic-bezier(.2,.9,.3,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(10px)}}
+.flash>.row{animation:flash 1.8s ease}
+@keyframes flash{0%,40%{background:color-mix(in srgb,var(--pri2) 28%,var(--card))}}
+button,.chip,.pill,.row,.card.tripc,label.btn{transition:transform .12s,background .2s,opacity .2s}
+button:active,.chip:active,.pill:active,label.btn:active,.card.tripc:active{transform:scale(.96)}
+.row:active{background:var(--chip)}
+#tabbody{animation:fade .25s}
+.fab{animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}}
+.fab2{position:fixed;right:calc(50% - 150px);bottom:calc(env(safe-area-inset-bottom) + 22px);width:50px;height:50px;border-radius:50%;background:var(--card);box-shadow:0 6px 20px rgba(0,0,0,.18);display:grid;place-items:center;font-size:22px;z-index:6;cursor:pointer;animation:fade .4s .15s both}
+@media (max-width:360px){.fab2{right:14px}}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 60px);transform:translate(-50%,-60px);background:var(--card);box-shadow:var(--sh);border-radius:999px;padding:6px 14px;font-size:13px;z-index:7;opacity:0;transition:opacity .2s}
+.brow{cursor:pointer;border-radius:10px}
+.bbar{height:6px;border-radius:4px;background:var(--chip);position:relative;margin-top:4px}
+.bbar i{position:absolute;top:0;bottom:0;border-radius:4px}
+.legend div{cursor:pointer;padding:3px 4px;border-radius:8px}.legend div:active{background:var(--chip)}
+.feed{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.feed:last-child{border-bottom:0}.feed .tx{flex:1;font-size:14px}.feed .tx .mut{font-size:12px}
+.scanbox{background:var(--card);border-radius:14px;padding:10px 12px;margin:10px 0;font-size:14px;border:1.5px solid color-mix(in srgb,var(--pri) 30%,var(--line))}
+.prog{height:6px;border-radius:4px;background:var(--chip);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;width:0;background:var(--pri2);transition:width .3s}
+.scanbar{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap}
+#toast{display:flex;align-items:center;gap:12px}
+#toast button{border:0;background:#fff;color:#111;border-radius:8px;padding:4px 10px;font-weight:700;font-size:13px}
+.sheet{transition:transform .2s}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 .row .ico{width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;font-size:20px;flex:none}
 .row .mid{flex:1;min-width:0}
 .row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -166,7 +196,9 @@ const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣',
 const _dg={};
 function digits(c){if(!(c in _dg)){try{_dg[c]=new Intl.NumberFormat('en',{style:'currency',currency:c}).resolvedOptions().maximumFractionDigits}catch{_dg[c]=2}}return _dg[c]}
 const fromMinor=(m,c)=>m/10**digits(c);
-const num=s=>{const v=parseFloat(String(s??'').replace(/[,，\s]/g,''));return isFinite(v)?v:0};
+const half=s=>String(s??'').replace(/[\uFF01-\uFF5E]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/\u3000/g,' ');
+const num=s=>{let x=half(s).trim().replace(/[\s，]/g,'');if(/^-?\d+,\d{1,2}$/.test(x))x=x.replace(',','.');else x=x.replace(/,/g,'');const v=parseFloat(x);return isFinite(v)?v:0};
+const buzz=(n=10)=>{try{navigator.vibrate&&navigator.vibrate(n)}catch{}};
 const toMinor=(s,c)=>Math.round(num(s)*10**digits(c));
 function fmt(m,c){try{return new Intl.NumberFormat('zh-CN',{style:'currency',currency:c}).format(fromMinor(m,c))}catch{return c+' '+fromMinor(m,c).toFixed(2)}}
 const plain=(m,c)=>String(+fromMinor(m,c).toFixed(digits(c)));
@@ -233,7 +265,12 @@ function subscribe(){
   if(key===chanKey)return;
   if(chan){sb.removeChannel(chan);chan=null}
   chanKey=key;if(!key)return;
-  chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{if(p.new&&p.new.id){applyRow(p.new);persist();renderSoft()}}).subscribe();
+  chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{const r=p.new;if(!r||!r.id)return;const t=S.trips[r.trip_id];
+    if(t&&r.kind==='expense'&&r.updated_at>(S.synced[r.id]||0)){const d=r.data,old=t.expenses.find(x=>x.id===r.id),me=S.me[t.id];
+      if(d.by&&d.by!==me){const what=d.type==='payment'?`${mname(t,d.from)}→${mname(t,d.to)} 还款`:d.title;
+        toast(`🔔 ${mname(t,d.by)} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${what} ${fmt(d.amount,d.currency)}`);buzz(15)}
+      if(!d.deleted)flashIds.add(r.id)}
+    applyRow(r);persist();renderSoft()}).subscribe();
 }
 async function refreshCurrent(){
   const t=trip();if(!sb||!t||!t.cloud)return;
@@ -311,9 +348,13 @@ function pairwise(t){
 const involves=(e,id)=>id in payersOf(e)||id in sharesOf(e);
 
 /* ================= 渲染 ================= */
+const _heroPrev={},flashIds=new Set();let animNext=true;
 function render(){
   const t=trip();
   $('#app').innerHTML=t?tripView(t):homeView();
+  animNext=false;
+  if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
+  if(flashIds.size)setTimeout(()=>flashIds.clear(),1900);
   subscribe();
 }
 function homeView(){
@@ -337,19 +378,20 @@ function tripView(t){
   let meLine='';
   if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base):b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
   const who=me?'':`<div class="banner"><b>你是谁？</b><span class="mut small"> 选一下，就能看到“你欠 / 你借出”</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
-  const tabs=[['list','账单'],['bal','结余'],['stats','统计'],['set','设置']];
-  const body={list:listView,bal:balView,stats:statsView,set:setView}[view.tab](t);
+  const tabs=[['list','账单'],['bal','结余'],['stats','统计'],['feed','动态'],['set','设置']];
+  const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
   return `<header class="top"><button class="icon" data-act="home">‹</button><div class="ttl">${t.emoji||''} ${esc(t.name)}</div><button class="icon" data-act="syncOut" title="邀请 / 同步" id="syncdot">${syncIcon(t)}</button></header>
   <main class="wrap">${who}
-  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big">${fmt(total,t.base)}</div>${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}</section>
+  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big" data-v="${total}">${fmt(total,t.base)}</div>${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}</section>
   <nav class="tabs">${tabs.map(([k,l])=>`<button class="${view.tab===k?'on':''}" data-act="tab" data-t="${k}">${l}</button>`).join('')}</nav>
   <div id="tabbody">${body}</div></main>
-  ${view.tab==='list'||view.tab==='bal'?`<button class="fab" data-act="add">＋ 记一笔</button>`:''}`;
+  ${view.tab==='list'||view.tab==='bal'?`<button class="fab" data-act="add">＋ 记一笔</button><label class="fab2" title="拍收据记账">📷<input type="file" accept="image/*" capture="environment" id="quick-scan" hidden></label>`:''}
+  <div class="ptr" id="ptr">↓ 下拉刷新</div>`;
 }
 function listView(t){
   return `<div class="search"><input id="search" type="search" placeholder="🔍 搜索账单、备注、人名" value="${esc(view.q)}"></div>
   <div class="chips"><button class="chip ${!view.cat?'on':''}" data-act="fcat" data-c="">全部</button>${CATS.map(c=>`<button class="chip ${view.cat===c[0]?'on':''}" data-act="fcat" data-c="${c[0]}">${c[1]} ${c[2]}</button>`).join('')}<button class="chip ${view.cat==='settle'?'on':''}" data-act="fcat" data-c="settle">💸 还款</button></div>
-  <div id="explist">${listItems(t)}</div>`;
+  <div id="explist" class="${animNext?'anim':''}">${listItems(t)}</div>`;
 }
 function listItems(t){
   const q=view.q.trim().toLowerCase(),me=S.me[t.id];
@@ -359,14 +401,14 @@ function listItems(t){
     const names=Object.keys({...payersOf(e),...sharesOf(e)}).map(id=>mname(t,id)).join(' ');
     return (e.title+' '+(e.note||'')+' '+cat(e.category)[2]+' '+names).toLowerCase().includes(q);
   });
-  if(!live(t).length)return `<div class="empty"><div class="e">🧾</div><p>还没有账单<br>点下面「记一笔」开始吧</p></div>`;
+  if(!live(t).length)return `<div class="empty"><div class="e">🧾</div><p>还没有账单<br>点「记一笔」，或者点 📷 直接拍收据</p></div>`;
   if(!ex.length)return `<div class="empty"><div class="e">🔍</div><p>没有找到匹配的账单</p></div>`;
   ex.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
   const groups={};ex.forEach(e=>(groups[e.date]=groups[e.date]||[]).push(e));
   return Object.entries(groups).map(([d,arr])=>{
     const dt=new Date(d+'T00:00');const wd='日一二三四五六'[dt.getDay()];
     const dayTotal=arr.filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
-    return `<div class="dayh"><span>${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>rowHTML(t,e,me)).join('')}</div>`;
+    return `<div class="dayh"><span>${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
   }).join('');
 }
 function rowHTML(t,e,me){
@@ -387,10 +429,11 @@ function rowHTML(t,e,me){
 function balView(t){
   const b=balances(t),simp=t.simplify!==false;
   const ms=t.members.filter(m=>!m.deleted||b[m.id]);
-  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${S.me[t.id]===m.id?' <span class="mut small">（我）</span>':''}</div><div style="text-align:right">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
+  const mx=Math.max(1,...ms.map(m=>Math.abs(b[m.id]||0)));
+  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${S.me[t.id]===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
   const xs=simp?simplify(b):pairwise(t);
   const xrows=xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b>${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已还</button></div>`).join('');
-  return `<div class="card"><h3>每个人的结余</h3>${rows||'<p class="mut">还没有成员</p>'}</div>
+  return `<div class="card"><h3>每个人的结余 <span class="mut small" style="font-weight:400">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
   <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">合并转账，让还款次数最少</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
   <div class="card"><h3>怎么还钱</h3>${xrows||`<div class="empty" style="padding:16px"><div class="e">🎉</div>大家都结清了</div>`}
   ${xrows?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}
@@ -407,7 +450,7 @@ function statsView(t){
   const C=2*Math.PI*40;let off=0;
   const arcs=cats.map(([k,v])=>{const len=v/total*C,s=`<circle r="40" cx="60" cy="60" fill="none" stroke="${CATCOL[k]||'#888'}" stroke-width="18" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`;off+=len;return s}).join('');
   const donut=`<svg viewBox="0 0 120 120" width="150" height="150" style="flex:none">${arcs}<text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">总计</text><text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(fmt(total,t.base).replace(/\.\d+$/,''))}</text></svg>`;
-  const legend=cats.map(([k,v])=>`<div><i style="background:${CATCOL[k]}"></i><span>${cat(k)[1]} ${cat(k)[2]}</span><b>${Math.round(v/total*100)}%</b></div>`).join('');
+  const legend=cats.map(([k,v])=>`<div data-act="statCat" data-c="${k}"><i style="background:${CATCOL[k]}"></i><span>${cat(k)[1]} ${cat(k)[2]}</span><b>${Math.round(v/total*100)}%</b></div>`).join('');
   const maxP=Math.max(...t.members.map(m=>Math.max(cons[m.id]||0,paid[m.id]||0)),1);
   const ppl=t.members.filter(m=>cons[m.id]||paid[m.id]).map(m=>`<div style="margin:10px 0"><div style="display:flex;align-items:center;gap:8px">${av(t,m.id)}<b style="flex:1">${esc(m.name)}</b></div>
     <div class="small mut" style="display:flex;justify-content:space-between;margin-top:4px"><span>消费</span><span>${fmt(cons[m.id]||0,t.base)}</span></div><div class="bar"><i style="width:${(cons[m.id]||0)/maxP*100}%;background:${m.color}"></i></div>
@@ -439,15 +482,100 @@ function setView(t){
 /* ================= Sheet / 工具 ================= */
 function openSheet(html){const r=$('#sheet-root');r.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="sheet" id="sheet">${html}</div>`;r.classList.add('open');document.body.style.overflow='hidden'}
 function closeSheet(){const r=$('#sheet-root');r.classList.remove('open');r.innerHTML='';document.body.style.overflow='';ed=null}
-let _tt;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2200)}
+let _tt;function toast(m,undo){const el=$('#toast');el.textContent='';const sp=document.createElement('span');sp.textContent=m;el.append(sp);
+  if(undo){const b=document.createElement('button');b.textContent='撤销';b.onclick=()=>{el.classList.remove('show');undo()};el.append(b)}
+  el.style.pointerEvents=undo?'auto':'none';el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),undo?4500:2400)}
+function confetti(){const cv=document.createElement('canvas');cv.className='confetti';cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio;document.body.appendChild(cv);
+  const g=cv.getContext('2d'),cols=['#14b8a6','#f97316','#eab308','#ec4899','#3b82f6','#22c55e'],P=Array.from({length:140},()=>({x:cv.width/2,y:cv.height*.35,vx:(Math.random()-.5)*28,vy:-Math.random()*26-6,r:Math.random()*8+5,c:cols[Math.random()*6|0],a:Math.random()*6}));
+  let f=0;(function tick(){g.clearRect(0,0,cv.width,cv.height);for(const p of P){p.vy+=.9;p.x+=p.vx;p.y+=p.vy;p.vx*=.98;p.a+=.2;g.save();g.translate(p.x,p.y);g.rotate(p.a);g.fillStyle=p.c;g.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);g.restore()}
+    if(++f<110)requestAnimationFrame(tick);else cv.remove()})()}
+function countUp(el,from,to,c){const t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/600),e=1-Math.pow(1-k,3);el.textContent=fmt(Math.round(from+(to-from)*e),c);if(k<1)requestAnimationFrame(step)})(t0)}
+const relTime=ts=>{const d=(Date.now()-ts)/1000;if(d<60)return'刚刚';if(d<3600)return Math.floor(d/60)+' 分钟前';if(d<86400)return Math.floor(d/3600)+' 小时前';const x=new Date(ts);return `${x.getMonth()+1}月${x.getDate()}日 ${String(x.getHours()).padStart(2,'0')}:${String(x.getMinutes()).padStart(2,'0')}`};
 async function copy(text){try{await navigator.clipboard.writeText(text);return true}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch{}ta.remove();return ok}}
 function download(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
-async function compressImg(file){
+async function imgToCanvas(file,max,gray){
   const url=URL.createObjectURL(file),img=new Image();
-  await new Promise((r,j)=>{img.onload=r;img.onerror=j;img.src=url});
-  const s=Math.min(1,1100/Math.max(img.width,img.height)),cv=document.createElement('canvas');
-  cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-  URL.revokeObjectURL(url);return cv.toDataURL('image/jpeg',.7);
+  try{await new Promise((r,j)=>{img.onload=r;img.onerror=j;img.src=url})}finally{setTimeout(()=>URL.revokeObjectURL(url),0)}
+  const s=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');
+  cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);const g=cv.getContext('2d');
+  if(gray)g.filter='grayscale(1) contrast(1.35)';g.drawImage(img,0,0,cv.width,cv.height);return cv;
+}
+async function compressImg(file){return(await imgToCanvas(file,1100)).toDataURL('image/jpeg',.7)}
+
+/* ================= 收据识别（Tesseract.js，在手机本地识别，不上传） ================= */
+const OCR_LANG={CNY:'chi_sim',JPY:'jpn',KRW:'kor',TWD:'chi_tra',HKD:'chi_tra',MOP:'chi_tra',THB:'tha'};
+let _tess=null,_ocrProg=()=>{};
+function loadScript(src){return new Promise((r,j)=>{const s=document.createElement('script');s.src=src;s.onload=r;s.onerror=j;document.head.appendChild(s)})}
+async function ocr(file,lang){
+  if(!window.Tesseract)await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js');
+  const langs=lang==='eng'?['eng']:[lang,'eng'],key=langs.join('+');
+  if(!_tess||_tess.key!==key){if(_tess)_tess.w.terminate().catch(()=>{});_tess={key,w:await Tesseract.createWorker(langs,1,{logger:m=>{if(m.status==='recognizing text')_ocrProg(m.progress)}})}}
+  const cv=await imgToCanvas(file,1800,true);
+  return normText((await _tess.w.recognize(cv)).data.text||'');
+}
+function normText(text){return half(text).replace(/\\(?=\s?\d)/g,'¥').replace(/([\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af])[ \t]+(?=[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af])/g,'$1')}
+function parseReceipt(text){
+  text=normText(text);
+  const DT=/20\d{2}\s*[\/\-.年]|\b\d{1,2}:\d{2}\b|\d{1,2}[\/\-.]\d{1,2}[\/\-.]20\d{2}/;
+  const raw=text.split(/\n/).map(l=>l.replace(/\s+/g,' ').trim()).filter(Boolean);
+  const PRICE=/(?:^|[\s:：])[-−]?\s*(?:[¥￥$€£₩฿]|RM|NT\$|HK\$|S\$)?\s*((?:\d{1,3}(?:[,，]\d{3})+|\d+)(?:[.．]\d{1,2})?)\s*(?:円|元|원|บาท)?[\s*※#TＴ外内軽]*$/;
+  const TOTAL=/合\s*[計计]|总\s*[计額额]|總\s*[計額]|应\s*付|應\s*付|[實实]\s*付|实\s*收|お?会\s*計|お買上|ご請求|total|amount\s*due|grand|balance\s*due|합\s*계|총\s*액|결제\s*금액|ยอดรวม/i;
+  const SUB=/小\s*[計计]|subtotal|sub-total|sub total/i;
+  const SKIP=/找零|找[赎贖]|お釣|釣銭|預り|预收|[现現]金|cash|change|card|visa|master|カード|クレジット|信用卡|支付[宝寶]|微信|alipay|wechat|points?|ポイント|tel|電話|电话|单号|單號|[发發]票|receipt|レシート|領収|[会會]员|member|数量|數量|qty|no\.|#\d|invoice|abn|gst\s*incl|免税|お預|担当|收银|收銀|cashier|table|桌|人数|人數|guest|item\s*count|点数|點數/i;
+  const TAX=/消費税|税|tax|vat|gst|服务费|服務費|service|サービス料|tip|gratuity|小费|小費|봉사료/i;
+  const INCL=/内|內|incl|含|included/i;
+  const val=l=>{const m=l.match(PRICE);if(!m)return null;const v=parseFloat(m[1].replace(/[,，]/g,'').replace('．','.'));return isFinite(v)?{v,idx:m.index}:null};
+  const L=raw.map(l=>{const p=val(l);return{l,p:p?p.v:null,name:p?l.slice(0,p.idx).replace(/[:：\s.。·•*]+$/,'').trim():l}});
+  let total=null,totalIdx=-1;
+  L.forEach((x,i)=>{if(TOTAL.test(x.l)&&!SUB.test(x.l)){let v=x.p;if(v==null&&L[i+1]&&L[i+1].p!=null&&!/[a-z\u4e00-\u9fff\u3040-\u30ff]/i.test(L[i+1].name))v=L[i+1].p;if(v!=null&&v>0&&(total==null||v>=total)){total=v;totalIdx=i}}});
+  if(total==null){const c=L.filter(x=>x.p!=null&&x.p<1e7&&!SKIP.test(x.l));if(c.length){const best=c.reduce((a,b)=>b.p>a.p?b:a);total=best.p;totalIdx=L.indexOf(best)}}
+  const end=totalIdx>=0?totalIdx:L.length;
+  const items=[];let extra=0;
+  for(let i=0;i<end;i++){const x=L[i];if(x.p==null||x.p<=0)continue;
+    if(TOTAL.test(x.l)||SUB.test(x.l)||SKIP.test(x.l)||DT.test(x.l))continue;
+    if(TAX.test(x.l)){if(!INCL.test(x.l))extra+=x.p;continue}
+    const name=x.name.replace(/^[\d\s.:#-]{1,8}(?=\D)/,'').replace(/\s*[x×*]\s*\d+$/i,'').trim();
+    if(!/[a-z\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0e00-\u0e7f]{1,}/i.test(name))continue;
+    items.push({name:name.slice(0,30),amount:x.p});}
+  const sum=items.reduce((a,b)=>a+b.amount,0)+extra;
+  const itemsOK=items.length>=2&&total!=null&&Math.abs(sum-total)<=Math.max(1,total*.01);
+  let date=null,m;
+  if(m=text.match(/(20\d{2})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})/))date=[m[1],m[2],m[3]];
+  else if(m=text.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](20\d{2})\b/))date=[m[3],m[2],m[1]];
+  else if(m=text.match(/令和\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})/))date=[String(2018+ +m[1]),m[2],m[3]];
+  if(date&&(+date[1]<1||+date[1]>12||+date[2]<1||+date[2]>31))date=null;
+  const dateStr=date?`${date[0]}-${String(date[1]).padStart(2,'0')}-${String(date[2]).padStart(2,'0')}`:null;
+  const merchant=((L.slice(0,5).find(x=>x.p==null&&!SKIP.test(x.l)&&!TOTAL.test(x.l)&&!DT.test(x.l)&&/[a-z\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]{2,}/i.test(x.l)&&x.l.length<=30)||{}).l||'').replace(/^[\s\-—–_~·•*.。,，:：|]+/,'').trim()||null;
+  let currency=null;
+  if(/円|税込|合計|お会計|消費税/.test(text))currency='JPY';else if(/₩|원|합계/.test(text))currency='KRW';else if(/฿|บาท/.test(text))currency='THB';
+  else if(/NT\$/.test(text))currency='TWD';else if(/HK\$/.test(text))currency='HKD';else if(/S\$/.test(text))currency='SGD';else if(/\bRM\s?\d/.test(text))currency='MYR';
+  else if(/€/.test(text))currency='EUR';else if(/£/.test(text))currency='GBP';else if(/元|合计|应付|实付/.test(text))currency=null;
+  return{merchant,total,date:dateStr,currency,items:itemsOK?items:[],allItems:items,extra};
+}
+async function scanReceipt(file,lang){
+  const t=trip();if(!ed||!t)return;
+  try{ed.receipt=await compressImg(file)}catch{return toast('无法读取这张图片')}
+  ed.scanFile=file;lang=lang||OCR_LANG[ed.currency]||'eng';
+  ed.scan={status:'reading',lang};renderEditor();
+  _ocrProg=p=>{const el=$('#scan-prog');if(el)el.style.width=Math.round(p*100)+'%'};
+  let r,text;
+  try{text=await ocr(file,lang);r=parseReceipt(text)}catch(e){console.warn(e);if(ed){ed.scan={status:'fail',lang};renderEditor()}return toast('识别失败（需要联网下载识别模型），请手动填写')}
+  if(!ed)return;
+  if(r.currency&&r.currency!==ed.currency&&CUR.includes(r.currency)&&!r.total==false){ed.currency=r.currency;ed.rate=r.currency===t.base?'':String(t.rates?.[r.currency]||'')}
+  if(r.total!=null)ed.amountStr=String(+r.total.toFixed(digits(ed.currency)));
+  if(r.merchant&&!ed.title.trim())ed.title=r.merchant;
+  if(r.date)ed.date=r.date;
+  ed.scan={status:'done',lang,r,text};
+  if(ed.mode==='items'&&r.items.length)applyScanItems();
+  renderEditor();buzz(15);
+  toast(r.total!=null?`✓ 已识别 ${fmt(toMinor(r.total,ed.currency),ed.currency)}，请核对`:'没认出总金额，请手动输入');
+  if(ed.currency!==t.base&&!num(ed.rate)){const rt=await fetchRate(ed.currency,t.base);if(rt&&ed){ed.rate=String(+rt.toPrecision(6));renderEditor()}}
+}
+function applyScanItems(){
+  const r=ed.scan&&ed.scan.r;if(!r||!r.items.length)return;
+  const all=activeM(trip()).map(m=>m.id);
+  ed.mode='items';ed.items=r.items.map(it=>({name:it.name,amountStr:String(it.amount),people:[...all]}));
+  ed.extraStr=r.extra?String(+r.extra.toFixed(2)):'';
 }
 async function fetchRate(from,to){
   try{const j=await(await fetch(`https://open.er-api.com/v6/latest/${from}`)).json();if(j.rates?.[to])return j.rates[to]}catch{}
@@ -489,7 +617,7 @@ function openEditor(id){
       payMode:pids.length>1?'multi':'single',payer:pids[0],payers:mapObj(e.payers,s),mode:sp.mode,
       equal:sp.equal?[...sp.equal]:[...M],exact:mapObj(sp.exact||{},s),percent:mapObj(sp.percent||{},String),
       shares:sp.shares?mapObj(sp.shares,String):mapObj(ones(M),String),
-      items:(sp.items||[]).map(it=>({name:it.name,amountStr:s(it.amount),people:[...it.people]})),extraStr:sp.extra?s(sp.extra):'',note:e.note||'',receipt:e.receipt||null};
+      items:(sp.items||[]).map(it=>({name:it.name,amountStr:s(it.amount),people:[...it.people]})),extraStr:sp.extra?s(sp.extra):'',note:e.note||'',receipt:e.receipt||null,by:e.by,updatedAt:e.updatedAt};
   }else{
     const c=t.lastCurrency||t.base;
     ed={id:null,isNew:true,title:'',category:'food',date:today(),currency:c,amountStr:'',rate:c===t.base?'':String(t.rates?.[c]||''),
@@ -518,6 +646,11 @@ function renderEditor(focus){
   const multi=ed.payMode==='multi'?`<div class="card" style="margin:6px 0 0;padding:8px 12px"><div class="mut small">每人付了多少</div>${M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="payers.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed.payers[m.id]??'')}"><span class="mut small" style="width:30px">${c}</span></div>`).join('')}</div>`:'';
   $('#sheet').innerHTML=`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>${ed.isNew?'记一笔':'编辑账单'}</b><button class="go" data-act="edSave">保存</button></div>
   <div class="sheet-body">
+   <div class="scanbar" style="margin-top:0">
+    <label class="btn sm primary" style="cursor:pointer;color:#fff">📷 拍收据自动填写<input type="file" accept="image/*" capture="environment" id="ed-receipt" hidden></label>
+    <label class="btn sm" style="cursor:pointer">🖼️ 从相册选<input type="file" accept="image/*" id="ed-receipt2" hidden></label>
+    ${ed.receipt?`<img class="thumb" src="${ed.receipt}" data-act="viewImg" style="width:44px;height:44px"><button class="btn sm" data-act="edDelReceipt">移除</button>`:''}</div>
+   ${scanBox()}
    <input class="in" data-f="title" placeholder="买了什么？例如：晚餐烧肉" value="${esc(ed.title)}" style="font-size:17px">
    <div class="amtrow"><select data-f="currency">${CUR.map(x=>`<option value="${x}" ${x===c?'selected':''}>${x}</option>`).join('')}</select>
     ${ed.mode==='items'?`<div class="bigamt" id="ed-total"></div>`:`<input class="bigamt" data-f="amountStr" inputmode="decimal" placeholder="0" value="${esc(ed.amountStr)}">`}</div>
@@ -530,14 +663,23 @@ function renderEditor(focus){
    <div id="ed-split">${split}</div>
    <div class="preview" id="ed-preview"></div>
    <label class="fld"><span>备注</span><textarea data-f="note" rows="2" placeholder="可选">${esc(ed.note)}</textarea></label>
-   <div style="display:flex;gap:10px;align-items:center;margin:10px 0">
-    <label class="btn sm" style="cursor:pointer">📷 ${ed.receipt?'更换':'添加'}收据照片<input type="file" accept="image/*" id="ed-receipt" hidden></label>
-    ${ed.receipt?`<img class="thumb" src="${ed.receipt}" data-act="viewImg"><button class="btn sm" data-act="edDelReceipt">移除</button>`:''}</div>
+   ${!ed.isNew&&ed.by?`<p class="mut small">最后由 ${esc(mname(trip(),ed.by))} 修改${ed.updatedAt?' · '+relTime(ed.updatedAt):''}</p>`:''}
    ${ed.isNew?'':`<button class="btn danger block" data-act="edDel">删除这笔账单</button>`}
   </div>`;
   const nb=$('#sheet .sheet-body');if(nb)nb.scrollTop=sc;
   edPreview();
   if(focus&&ed.isNew)setTimeout(()=>$('[data-f="title"]')?.focus(),250);
+}
+function scanBox(){
+  const s=ed.scan;if(!s)return'';
+  const langs=[['chi_sim','简中'],['chi_tra','繁中'],['jpn','日本語'],['kor','한국어'],['eng','English']];
+  const retry=`<div class="mut small" style="margin-top:8px">不准？换语言重试：</div><div class="chips">${langs.map(([k,l])=>`<button class="chip ${s.lang===k?'on':''}" data-act="rescan" data-l="${k}">${l}</button>`).join('')}</div>`;
+  if(s.status==='reading')return `<div class="scanbox">🔍 正在识别收据…<span class="mut small">（第一次用要下载识别模型，约 10 秒）</span><div class="prog"><i id="scan-prog"></i></div></div>`;
+  if(s.status==='fail')return `<div class="scanbox">⚠️ 识别失败，请手动填写${retry}</div>`;
+  const r=s.r,got=[r.merchant&&'商家',r.total!=null&&'金额',r.date&&'日期'].filter(Boolean);
+  return `<div class="scanbox">${got.length?`✓ 已自动填写：${got.join(' / ')}，请核对`:'没识别出有用的信息，请手动填写'}
+    ${r.items.length&&ed.mode!=='items'?`<div style="margin-top:8px"><button class="btn sm primary" style="color:#fff" data-act="scanItems">🧾 识别到 ${r.items.length} 个品项，按品项分摊</button></div>`:''}
+    ${retry}<details style="margin-top:6px"><summary class="mut small">查看识别到的文字</summary><pre class="mut small" style="white-space:pre-wrap;max-height:160px;overflow:auto">${esc(s.text)}</pre></details></div>`;
 }
 function involvedInEd(id){return ed&&(ed.equal.includes(id)||ed.payer===id||id in ed.payers||ed.items.some(it=>it.people.includes(id))||num(ed.exact[id])||num(ed.percent[id]))}
 function edCompute(){
@@ -581,7 +723,8 @@ function edSave(){
   const t=trip();
   const e=ed.isNew?{id:uid(),createdAt:now()}:t.expenses.find(x=>x.id===ed.id);
   for(const k of['payers','split','from','to'])delete e[k];
-  Object.assign(e,calc,{title:ed.title.trim()||cat(ed.category)[2],category:ed.category,date:ed.date||today(),note:ed.note.trim(),updatedAt:now()});
+  Object.assign(e,calc,{title:ed.title.trim()||cat(ed.category)[2],category:ed.category,date:ed.date||today(),note:ed.note.trim(),updatedAt:now(),by:S.me[t.id]||null});
+  flashIds.add(e.id);buzz();
   if(ed.receipt)e.receipt=ed.receipt;else delete e.receipt;
   if(ed.isNew)t.expenses.push(e);
   t.rates=t.rates||{};if(calc.currency!==t.base&&t.rates[calc.currency]!==calc.rate){t.rates[calc.currency]=calc.rate;t.metaAt=now()}t.lastCurrency=calc.currency;
@@ -606,9 +749,12 @@ function stSave(el){
   if(from===to)return toast('还钱的人和收钱的人不能一样');
   if(!(amount>0))return toast('请输入金额');
   const id=el.dataset.id;const e=id?t.expenses.find(x=>x.id===id):{id:uid(),createdAt:now()};
-  Object.assign(e,{type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now()});
+  const before=Object.values(balances(t)).some(v=>v);
+  Object.assign(e,{type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:S.me[t.id]||null});
   if(!id)t.expenses.push(e);
-  save();closeSheet();render();toast('已记录还款 ✓');
+  flashIds.add(e.id);buzz();
+  save();closeSheet();render();
+  if(before&&!Object.values(balances(t)).some(v=>v)){confetti();buzz([20,60,20]);toast('🎉 全部结清！')}else toast('已记录还款 ✓');
 }
 
 /* ================= 同步（同步码 / 链接 / 文件） ================= */
@@ -690,7 +836,7 @@ function openImport(){
 
 /* ================= 导出 ================= */
 function exportCSV(){
-  const t=trip(),ms=t.members;
+  const t=trip(),ms=t.members.filter(m=>!m.deleted||live(t).some(e=>involves(e,m.id)));
   const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const head=['日期','项目','类别','币种','金额','汇率',`折合${t.base}`,'付款人',...ms.map(m=>m.name+' 分摊'),'备注'];
   const rows=live(t).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{const{T,owed}=baseSplit(e,t);const p=payersOf(e);
@@ -707,13 +853,38 @@ function summaryText(t){
   return `【${t.name}】结算清单\n总花费 ${fmt(total,t.base)} · ${activeM(t).length} 人\n\n`+xs.map(x=>`${mname(t,x.from)} → ${mname(t,x.to)}  ${fmt(x.amt,t.base)}`).join('\n')+'\n\n— 来自 旅账';
 }
 
+function deleteExpense(id){
+  const t=trip(),e=t&&t.expenses.find(x=>x.id===id);if(!e)return;
+  e.deleted=true;e.updatedAt=now();e.by=S.me[t.id]||null;save();render();buzz(20);
+  toast(`已删除「${e.type==='payment'?'还款':e.title}」`,()=>{e.deleted=false;e.updatedAt=now();flashIds.add(e.id);save();render()});
+}
+function openMember(id){
+  const t=trip(),b=balances(t)[id]||0;let paid=0,owe=0;
+  const rows=live(t).filter(e=>involves(e,id)).sort((a,b)=>b.date.localeCompare(a.date)).map(e=>{const s=baseSplit(e,t),p=s.paid[id]||0,o=s.owed[id]||0;paid+=p;owe+=o;
+    const title=e.type==='payment'?`💸 ${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}`:`${cat(e.category)[1]} ${esc(e.title)}`;
+    return `<div class="row" data-act="memberEdit" data-id="${e.id}"><div class="mid"><div class="t">${title}</div><div class="s">${e.date}${p?' · 付了 '+fmt(p,t.base):''}${o?' · 分摊 '+fmt(o,t.base):''}</div></div><div class="amt"><b class="${p-o>0?'pos':p-o<0?'neg':'mut'}">${p-o>0?'+':''}${fmt(p-o,t.base)}</b></div></div>`}).join('');
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>${esc(mname(t,id))}</b><span style="width:40px"></span></div>
+  <div class="sheet-body"><div style="text-align:center">${av(t,id,'lg')}<div style="font-size:26px;font-weight:800;margin-top:6px" class="${b>0?'pos':b<0?'neg':'mut'}">${b>0?'应收 '+fmt(b,t.base):b<0?'应付 '+fmt(-b,t.base):'已结清'}</div></div>
+  <div class="stat4" style="margin:14px 0"><div><span class="mut small">一共垫付</span><b>${fmt(paid,t.base)}</b></div><div><span class="mut small">自己消费</span><b>${fmt(owe,t.base)}</b></div></div>
+  ${b<0?`<button class="btn primary block" data-act="settle" data-from="${id}" data-to="${(simplify(balances(t)).find(x=>x.from===id)||{}).to||''}" data-amt="${(simplify(balances(t)).find(x=>x.from===id)||{}).amt||-b}">💸 TA 来还钱</button>`:''}
+  <div class="list">${rows||'<p class="mut" style="padding:12px">还没有相关账单</p>'}</div></div>`);
+}
+function feedView(t){
+  const ev=[...t.expenses].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,100);
+  if(!ev.length)return `<div class="empty"><div class="e">🔔</div><p>大家记账、修改、删除都会出现在这里</p></div>`;
+  return `<div class="card">${ev.map(e=>{const who=e.by?esc(mname(t,e.by)):'有人',act=e.deleted?'删除了':((e.updatedAt||0)-(e.createdAt||0)<3000?'添加了':'修改了');
+    const what=e.type==='payment'?`${esc(mname(t,e.from))} → ${esc(mname(t,e.to))} 的还款`:`「${esc(e.title)}」`;
+    return `<div class="feed">${e.by?av(t,e.by):'<span class="av" style="background:#999">?</span>'}<div class="tx"><b>${who}</b> ${act} ${what} <b>${fmt(e.amount,e.currency)}</b><div class="mut">${relTime(e.updatedAt||0)}</div></div>
+    ${e.deleted?`<button class="btn sm" data-act="restore" data-id="${e.id}">恢复</button>`:`<button class="btn sm" data-act="edit" data-id="${e.id}">查看</button>`}</div>`}).join('')}</div>`;
+}
+
 /* ================= 事件 ================= */
 const ACT={
   home(){S.cur=null;persist();render();scrollTo(0,0)},
-  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};persist();render();scrollTo(0,0);refreshCurrent()},
+  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};animNext=true;persist();render();scrollTo(0,0);refreshCurrent()},
   newTrip:openNewTrip,createTrip,
-  tab(el){view.tab=el.dataset.t;render()},
-  fcat(el){view.cat=el.dataset.c;render()},
+  tab(el){if(view.tab===el.dataset.t)return;view.tab=el.dataset.t;animNext=true;render();buzz(5)},
+  fcat(el){view.cat=el.dataset.c;animNext=true;render()},
   setMe(el){S.me[S.cur]=el.dataset.id;persist();render()},
   add(){openEditor(null)},
   edit(el){openEditor(el.dataset.id)},
@@ -722,6 +893,7 @@ const ACT={
   edMode(el){const m=el.dataset.m,t=trip();
     if(m==='exact'&&!Object.keys(ed.exact).length&&ed.mode==='equal'&&ed.amountStr){const{e}=edCompute();const sh=allocate(e.amount,ones(ed.equal));ed.exact=mapObj(sh,v=>plain(v,ed.currency))}
     if(m==='percent'&&!Object.keys(ed.percent).length){const ids=ed.equal.length?ed.equal:activeM(t).map(x=>x.id);ids.forEach(id=>ed.percent[id]=String(+(100/ids.length).toFixed(2)))}
+    if(ed.mode==='items'&&m!=='items'){const{A}=edCompute();if(A>0)ed.amountStr=plain(A,ed.currency)}
     ed.mode=m;renderEditor()},
   edTogEq(el){const id=el.dataset.id,i=ed.equal.indexOf(id);i<0?ed.equal.push(id):ed.equal.splice(i,1);el.classList.toggle('on',i<0);edPreview()},
   edEqAll(){const M=activeM(trip()).map(m=>m.id);ed.equal=ed.equal.length===M.length?[]:[...M];renderEditor()},
@@ -734,10 +906,16 @@ const ACT={
   edDelReceipt(){ed.receipt=null;renderEditor()},
   viewImg(el){const d=document.createElement('div');d.className='viewer';d.innerHTML=`<img src="${el.src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)},
   edSave,
-  edDel(){if(!confirm('确定删除这笔账单？'))return;const e=trip().expenses.find(x=>x.id===ed.id);e.deleted=true;delete e.receipt;e.updatedAt=now();save();closeSheet();render();toast('已删除')},
-  settle(el){openSettle({from:el.dataset.from,to:el.dataset.to,amt:el.dataset.amt})},
+  edDel(){const id=ed.id;closeSheet();deleteExpense(id)},
+  memberSheet(el){openMember(el.dataset.id)},
+  statCat(el){view.tab='list';view.cat=el.dataset.c;view.q='';animNext=true;render();scrollTo(0,0)},
+  scanItems(){applyScanItems();renderEditor()},
+  rescan(el){if(ed&&ed.scanFile)scanReceipt(ed.scanFile,el.dataset.l)},
+  restore(el){const t=trip(),e=t.expenses.find(x=>x.id===el.dataset.id);if(!e)return;e.deleted=false;e.updatedAt=now();e.by=S.me[t.id]||null;flashIds.add(e.id);save();render();toast('已恢复「'+e.title+'」')},
+  settle(el){closeSheet();openSettle({from:el.dataset.from,to:el.dataset.to||undefined,amt:el.dataset.amt})},
+  memberEdit(el){closeSheet();openEditor(el.dataset.id)},
   stSave,
-  stDel(el){if(!confirm('确定删除这笔还款？'))return;const e=trip().expenses.find(x=>x.id===el.dataset.id);e.deleted=true;e.updatedAt=now();save();closeSheet();render()},
+  stDel(el){closeSheet();deleteExpense(el.dataset.id)},
   async copySummary(){toast(await copy(summaryText(trip()))?'已复制，去群里粘贴吧':'复制失败')},
   syncOut:openSyncOut,
   async cloudOn(){const t=trip();if(!sb)return;t.cloud=true;persist();closeSheet();render();await flush();
@@ -758,7 +936,28 @@ const ACT={
   delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？${t.cloud?'只会从这台手机移除，云端和朋友手机上的不受影响（用邀请链接可以重新加入）。':'此操作无法撤销。'}`))return;
     delete S.trips[t.id];delete S.me[t.id];S.order=S.order.filter(x=>x!==t.id);S.cur=null;save();render();toast('已删除')},
 };
-document.addEventListener('click',ev=>{const el=ev.target.closest('[data-act]');if(!el)return;const f=ACT[el.dataset.act];if(f)f(el,ev)});
+let swipeBlock=0;
+document.addEventListener('click',ev=>{if(Date.now()-swipeBlock<350)return;const el=ev.target.closest('[data-act]');if(!el)return;const f=ACT[el.dataset.act];if(f)f(el,ev)});
+/* 手势：左滑删除 / 下拉刷新 / 下滑关闭弹窗 */
+let sw=null,pt=null,sh=null;
+document.addEventListener('touchstart',e=>{const x=e.touches[0];
+  const r=e.target.closest('#explist .sw>.row');if(r)sw={r,x:x.clientX,y:x.clientY,dx:0,lock:null};
+  if(!$('#sheet')&&trip()&&scrollY<=0)pt={y:x.clientY,dy:0};
+  const hd=e.target.closest('.sheet-head');if(hd)sh={y:x.clientY,dy:0,el:$('#sheet')};
+},{passive:true});
+document.addEventListener('touchmove',e=>{const x=e.touches[0];
+  if(sw){const dx=x.clientX-sw.x,dy=x.clientY-sw.y;if(sw.lock===null&&(Math.abs(dx)>8||Math.abs(dy)>8))sw.lock=Math.abs(dx)>Math.abs(dy)?'x':'y';
+    if(sw.lock==='x'){sw.dx=Math.min(0,dx);sw.r.style.transition='none';sw.r.style.transform=`translateX(${sw.dx}px)`;sw.r.parentElement.classList.add('swiping');sw.r.parentElement.classList.toggle('arm',sw.dx<-90);pt=null}}
+  if(pt){pt.dy=x.clientY-pt.y;const el=$('#ptr');if(el&&pt.dy>0&&scrollY<=0){el.style.opacity=Math.min(1,pt.dy/70);el.style.transform=`translate(-50%,${Math.min(pt.dy,90)-60}px)`;el.textContent=pt.dy>70?'↑ 松开刷新':'↓ 下拉刷新'}}
+  if(sh){sh.dy=Math.max(0,x.clientY-sh.y);if(sh.el){sh.el.style.transition='none';sh.el.style.transform=`translateY(${sh.dy}px)`}}
+},{passive:true});
+document.addEventListener('touchend',async()=>{
+  if(sw){const{r,dx,lock}=sw;sw=null;r.style.transition='';if(lock==='x'){swipeBlock=Date.now();if(dx<-90){r.style.transform='translateX(-110%)';setTimeout(()=>deleteExpense(r.dataset.id),200)}else{r.style.transform='';const pe=r.parentElement;pe.classList.remove('arm');setTimeout(()=>pe.classList.remove('swiping'),230)}}}
+  if(sh){const{dy,el}=sh;sh=null;if(el){el.style.transition='';if(dy>100){el.style.transform='translateY(100%)';setTimeout(closeSheet,180)}else el.style.transform=''}}
+  if(pt){const dy=pt.dy;pt=null;const el=$('#ptr');if(!el)return;
+    if(dy>70){el.textContent='⏳ 刷新中…';buzz();const t=trip();if(t&&t.cloud&&sb)await refreshCurrent();else render();toast(t&&t.cloud?'☁️ 已是最新':'已刷新（本机账本）')}
+    const e2=$('#ptr');if(e2){e2.style.opacity=0;e2.style.transform=''}}
+});
 document.addEventListener('input',ev=>{const el=ev.target;
   if(ed&&el.dataset.f&&el.tagName!=='SELECT'){setPath(ed,el.dataset.f,el.value);edPreview()}
   if(el.id==='search'){view.q=el.value;$('#explist').innerHTML=listItems(trip())}
@@ -768,7 +967,8 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
     if(el.dataset.f==='currency'){ed.currency=el.value;ed.rate=el.value===t.base?'':String(t.rates?.[el.value]||'');renderEditor()}
     else if(el.dataset.f==='payer'){if(el.value==='__multi'){ed.payMode='multi';if(!Object.keys(ed.payers).length&&ed.amountStr)ed.payers={[ed.payer]:ed.amountStr}}else{ed.payMode='single';ed.payer=el.value}renderEditor()}
   }
-  if(el.id==='ed-receipt'&&el.files[0]){try{ed.receipt=await compressImg(el.files[0]);renderEditor()}catch{toast('无法读取这张图片')}}
+  if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
+  if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];openEditor(null);scanReceipt(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.ts&&t){const k=el.dataset.ts;
     if(k==='name'){t.name=el.value.trim()||t.name;t.metaAt=now()}
