@@ -239,8 +239,9 @@ const CUR=['CNY','USD','EUR','JPY','KRW','HKD','TWD','MOP','SGD','MYR','THB','VN
 const CURNAME={CNY:'人民币',USD:'美元',EUR:'欧元',JPY:'日元',KRW:'韩元',HKD:'港币',TWD:'新台币',MOP:'澳门元',SGD:'新加坡元',MYR:'马币',THB:'泰铢',VND:'越南盾',IDR:'印尼盾',PHP:'菲律宾比索',AUD:'澳元',NZD:'纽币',GBP:'英镑',CAD:'加元',CHF:'瑞郎'};
 const COLORS=['#2f6b5a','#b8733a','#6b5b95','#3f6f8f','#a0525e','#5f7f3a','#8a6a3b','#2f5d6b','#7a4f6b','#4a5551','#9a5b2c','#55703a'];
 const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸','🏖️','🎡','🗼','⛩️','🐫','🚢'];
-const THEMES={mountain:{name:'山野',icon:'⛰️',c:['#2f6b5a','#6f957f']},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae']},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62']},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a']},
+const THEMES={mountain:{name:'旅途',icon:'✈️',c:['#2f6b5a','#6f957f']},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae']},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62']},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a']},
   sea:{name:'海边',icon:'🏖️',c:['#2c6470','#86b3b0']},tea:{name:'抹茶',icon:'🍵',c:['#55703a','#a3b98a']},sand:{name:'沙丘',icon:'🐫',c:['#8a6a3b','#c9ac7c']},stone:{name:'石板',icon:'🪨',c:['#4a5551','#8d9a95']}};
+const tEmoji=t=>!t.emoji||t.emoji==='⛰️'?'🧳':t.emoji;
 const theme=t=>THEMES[t&&t.theme]||THEMES.mountain;
 const themesHTML=(cur,act)=>Object.entries(THEMES).map(([k,v])=>`<button class="th ${cur===k?'on':''}" style="--a:${v.c[0]};--b:${v.c[1]}" data-act="${act}" data-k="${k}">${v.icon}<br>${v.name}</button>`).join('');
 function greeting(){const h=new Date().getHours();return h<5?'夜深了 🌙 早点休息':h<11?'早安 ☀️ 今天去哪儿玩？':h<14?'午饭吃点好的 🍜':h<18?'下午茶时间 🧋':h<22?'晚上好 🌆 今天开心吗？':'夜深了 🌙 早点休息'}
@@ -358,7 +359,7 @@ function pushExpense(t,e,verb){
   const me=S.me[t.id],to=Object.keys({...payersOf(e),...sharesOf(e)});
   const mine=id=>{const o=sharesOf(e)[id];return o?`，你的那份 ${fmt(o,e.currency)}`:''};
   // 每个人的份额不一样，所以分开发
-  for(const id of to)if(id!==me)pushTo(t,[id],`${t.emoji||'🧳'} ${t.name}`,`${mname(t,me)} ${verb}「${e.title}」${fmt(e.amount,e.currency)}${verb==='删除了'?'':mine(id)}`,`?trip=${t.id}&tab=list`,e.id);
+  for(const id of to)if(id!==me)pushTo(t,[id],`${tEmoji(t)} ${t.name}`,`${mname(t,me)} ${verb}「${e.title}」${fmt(e.amount,e.currency)}${verb==='删除了'?'':mine(id)}`,`?trip=${t.id}&tab=list`,e.id);
 }
 const b64ToBytes=b=>{const s=atob((b+'='.repeat((4-b.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(s,c=>c.charCodeAt(0))};
 const standalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
@@ -510,7 +511,7 @@ function homeView(){
     let bal='';if(me){const b=balances(t)[me]||0;bal=b>0?`<span class="pos">别人欠你 ${fmt(b,t.base)}</span>`:b<0?`<span class="neg">你欠别人 ${fmt(-b,t.base)}</span>`:`<span class="mut">已结清 ✓</span>`}
     const un=unreadCount(t);
     return `<div class="postcard" data-act="open" data-id="${id}" style="--a:${th.c[0]};--b:${th.c[1]}">
-      <div class="pc-top"><span class="pc-emoji">${t.emoji||'🧳'}</span><span class="pc-stamp">${th.icon} ${th.name}${t.cloud?' · ☁️':''}</span></div>
+      <div class="pc-top"><span class="pc-emoji">${tEmoji(t)}</span><span class="pc-stamp">${th.icon} ${th.name}${t.cloud?' · ☁️':''}</span></div>
       <div class="pc-body"><div class="pc-name">${esc(t.name)}${un?` <span class="badge" style="position:static;display:inline-block;border:0">${un}</span>`:''}</div>
       <div class="pc-meta">${avStack(t)}<span>${activeM(t).length} 人 · 一共 ${fmt(total,t.base)}</span></div>
       <div class="pc-bal">${bal}</div></div></div>`}).join('');
@@ -545,7 +546,7 @@ function tripView(t){
    <div class="big" data-v="${total}">${fmt(total,t.base)}</div>
    <div class="hero-row" style="justify-content:flex-start;gap:10px;margin-top:6px">${avStack(t)}<span class="small" style="opacity:.92">${n} 人 · 人均 ${fmt(Math.round(total/n),t.base)}</span></div>
    ${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}
-   <div class="hero-emoji">${t.emoji||'🧳'}</div>
+   <div class="hero-emoji">${tEmoji(t)}</div>
    <svg class="wave" viewBox="0 0 400 20" preserveAspectRatio="none"><path d="M0 12 C 60 2, 120 22, 200 12 S 340 2, 400 12 V20 H0Z" fill="var(--bg)"/></svg>
   </section>
   <div id="tabbody">${body}</div></main>
@@ -785,7 +786,7 @@ function openNewTrip(){
    <label class="fld"><span>一起去的朋友（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
    <p class="mut small">之后也可以在「设置」里增删成员、换主题。</p></div>`);
 }
-const THEME_EMOJI={mountain:'⛰️',lake:'🛶',maple:'🍂',night:'🌙',sea:'🏖️',tea:'🍵',sand:'🐫',stone:'🧳'};
+const THEME_EMOJI={mountain:'🧳',lake:'🛶',maple:'🍂',night:'🌙',sea:'🏖️',tea:'🍵',sand:'🐫',stone:'🧳'};
 function createTrip(){
   const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value;
   const meName=$('#nt-me').value.trim()||'我';
