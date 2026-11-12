@@ -616,6 +616,8 @@ function listItems(t){
     return `<div class="dayh"><span>${first?(d>=first?`<b>Day ${dayDiff(first,d)+1}</b> · `:'<b>出发前</b> · '):''}${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
   }).join('');
 }
+let _blC={k:'',v:null};
+function _blCache(t){const k=t.id+':'+t.expenses.length+':'+Math.max(0,...t.expenses.map(e=>e.updatedAt||0));if(_blC.k!==k)_blC={k,v:billLines(t)};return _blC.v}
 function rowHTML(t,e,me){
   if(e.type==='payment'){
     return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:#16a34a">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款${pstat(e)==='pending'?' · ⏳ 等对方确认':pstat(e)==='rejected'?' · ✗ 对方说没收到':' · ✓ 已确认'}</div></div><div class="amt"><b class="${pstat(e)==='confirmed'?'':'mut'}">${fmt(e.amount,e.currency)}</b></div></div>`;
@@ -627,9 +629,25 @@ function rowHTML(t,e,me){
   let right=`<b>${fmt(baseTotal(e,t),t.base)}</b>`;
   if(me){const{paid,owed}=baseSplit(e,t);const net=(paid[me]||0)-(owed[me]||0);
     right=net>0?`<span class="pos">你借出<b>${fmt(net,t.base)}</b></span>`:net<0?`<span class="neg">你欠<b>${fmt(-net,t.base)}</b></span>`:`<span class="mut">不涉及<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
+    if(net<0){const mineL=((_blCache(t))[e.id]||[]).filter(x=>x.from===me);if(mineL.length&&mineL.every(x=>x.paid>=x.amt))right=`<span class="pos">已还清 ✓<b style="font-weight:500" class="mut">${fmt(-net,t.base)}</b></span>`;else if(mineL.length&&mineL.every(x=>x.rest<=0))right=`<span class="mut">⏳ 待确认<b style="font-weight:500">${fmt(-net,t.base)}</b></span>`}
     if(!(me in paid)&&!(me in owed))right=`<span class="mut">没参与<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
   }
   return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:${CATCOL[e.category]||'#64748b'}">${c[1]}</div><div class="mid"><div class="t">${esc(e.title)}${e.receipt?' 📎':''}</div><div class="s">${payer} 付了 ${fmt(e.amount,e.currency)} · ${n} 人分</div></div><div class="amt">${right}</div></div>`;
+}
+function billLines(t){
+  const bills=live(t).filter(e=>e.type!=='payment').sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
+  const pool={},pend={};
+  for(const p of live(t))if(p.type==='payment'){const k=p.from+'>'+p.to,st=pstat(p),v=baseTotal(p,t);if(st==='confirmed')pool[k]=(pool[k]||0)+v;else if(st==='pending')pend[k]=(pend[k]||0)+v}
+  const out={};
+  for(const e of bills)out[e.id]=billDebts(t,e).map(x=>{const k=x.from+'>'+x.to,paid=Math.min(x.amt,pool[k]||0);pool[k]=(pool[k]||0)-paid;
+    const pd=Math.min(x.amt-paid,pend[k]||0);pend[k]=(pend[k]||0)-pd;return{...x,paid,pending:pd,rest:x.amt-paid-pd}});
+  return out;
+}
+function lineHTML(t,x,me){
+  const cls=x.from===me?'neg':x.to===me?'pos':'';
+  const amt=x.paid>=x.amt?`<b class="mut"><s>${fmt(x.amt,t.base)}</s> ✓ 已还</b>`:x.rest<=0?`<b class="mut">${fmt(x.amt,t.base)} ⏳ 待确认</b>`
+    :`<b class="${cls}">${fmt(x.rest,t.base)}${x.paid||x.pending?` <span class="mut small" style="font-weight:500">/ ${fmt(x.amt,t.base)}</span>`:''}</b>`;
+  return `<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span>${amt}</div>`;
 }
 function billDebts(t,e){const{T,paid,owed}=baseSplit(e,t),res=[];if(!T)return res;
   for(const o in owed)for(const p in paid){if(o===p)continue;const v=Math.round(owed[o]*paid[p]/T);if(v>0)res.push({from:o,to:p,amt:v})}return res}
@@ -648,10 +666,11 @@ function balView(t){
   let how;
   if(simp){const xs=simplify(b);how=`<div class="card"><h3>💸 怎么还钱 <span class="mut small" style="font-weight:500">· 已合并成最少转账</span></h3>${xrows(xs)||done}${tail(xs)}</div>`}
   else{
+    const BL=billLines(t);
     const bills=live(t).sort((a,c)=>c.date.localeCompare(a.date)||(c.createdAt||0)-(a.createdAt||0)).map(e=>{
       if(e.type==='payment')return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>💸 还款</span><span class="mut small">${e.date.slice(5)}</span></div><div class="bl">${av(t,e.from)}<span>${esc(mname(t,e.from))}</span><span>${pstat(e)==='pending'?'说已还给':pstat(e)==='rejected'?'（没收到）':'已还给'}</span>${av(t,e.to)}<span>${esc(mname(t,e.to))}</span><b class="pos">${fmt(e.amount,e.currency)}</b></div></div>`;
-      const ds=billDebts(t,e);
-      return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}</span><span class="mut small">${e.date.slice(5)} · ${fmt(baseTotal(e,t),t.base)}</span></div>${ds.map(x=>`<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>`).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
+      const ds=BL[e.id]||[],clear=ds.length&&ds.every(x=>x.paid>=x.amt);
+      return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}${clear?' <span class="pos small">✓ 已结清</span>':''}</span><span class="mut small">${e.date.slice(5)} · ${fmt(baseTotal(e,t),t.base)}</span></div>${ds.map(x=>lineHTML(t,x,me)).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
     const xs=pairwise(t);
     how=`<div class="card"><h3>🧾 每笔账单谁欠谁 <span class="mut small" style="font-weight:500">· 没有合并</span></h3>${bills||'<p class="mut">还没有账单</p>'}</div>
     <div class="card"><h3>🤝 两个人之间合计</h3>${xrows(xs)||done}${tail(xs)}</div>`;
@@ -1017,7 +1036,7 @@ function edSave(){
 /* ================= 只读账单（不是自己记的） ================= */
 function openView(e){
   const t=trip(),me=S.me[t.id],c=e.currency,sh=sharesOf(e),owner=ownerOf(e);
-  const mine=billDebts(t,e).filter(x=>x.from===me);
+  const mine=(billLines(t)[e.id]||[]).filter(x=>x.from===me);
   const modeName={equal:'平均',exact:'按金额',percent:'按比例',shares:'按份数',items:'逐项'}[e.split.mode]||'';
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>账单详情</b><span style="width:44px"></span></div>
   <div class="sheet-body">
@@ -1029,7 +1048,9 @@ function openView(e){
    ${e.split.mode==='items'?`<div class="preview"><div class="mut small" style="margin-bottom:4px">品项</div>${e.split.items.map(it=>`<div class="pr"><span>${esc(it.name||'—')} <span class="mut small">${it.people.map(p=>esc(mname(t,p))).join('、')}</span></span><b>${fmt(it.amount,c)}</b></div>`).join('')}${e.split.extra?`<div class="pr"><span>税/服务费</span><b>${fmt(e.split.extra,c)}</b></div>`:''}</div>`:''}
    ${e.note?`<p>📝 ${esc(e.note)}</p>`:''}
    ${e.receipt?`<img src="${e.receipt}" data-act="viewImg" style="width:100%;max-height:280px;object-fit:contain;border-radius:14px;cursor:zoom-in">`:''}
-   ${mine.map(x=>`<button class="btn primary block" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">💸 还 ${esc(mname(t,x.to))} 我这份 ${fmt(x.amt,t.base)}</button>`).join('')}
+   ${mine.map(x=>x.rest>0?`<button class="btn primary block" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.rest}">💸 还 ${esc(mname(t,x.to))} 我这份 ${fmt(x.rest,t.base)}</button>`
+     :x.paid>=x.amt?`<div class="banner" style="text-align:center">✓ 你这份 ${fmt(x.amt,t.base)} 已经还给 ${esc(mname(t,x.to))} 了</div>`
+     :`<div class="banner" style="text-align:center">⏳ 你这份已还，等 ${esc(mname(t,x.to))} 确认收到</div>`).join('')}
   </div>`);
 }
 
@@ -1064,6 +1085,9 @@ function stSave(){
   if(!other)return toast('选一下对方');
   if(!(amount>0))return toast('请输入金额');
   const pay=stS.mode==='pay',from=pay?me:other,to=pay?other:me;
+  const dup=live(t).find(x=>x.type==='payment'&&x.from===from&&x.to===to&&x.amount===amount&&pstat(x)!=='rejected'&&now()-(x.createdAt||0)<30*60000);
+  if(dup&&!confirm(`${relTime(dup.createdAt)}已经记过一笔一样的还款（${mname(t,from)} → ${mname(t,to)} ${fmt(amount,t.base)}）。\n确定还要再记一笔吗？`))return;
+  if(stS.saving)return;stS.saving=true;
   const before=Object.values(balances(t)).some(v=>v);
   const e={id:uid(),createdAt:now(),type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:me,createdBy:me,status:pay?'pending':'confirmed'};
   if(!pay)e.confirmedAt=now();
@@ -1278,7 +1302,8 @@ const ACT={
   avReset(){setMyAvatar({avatar:null})},
   goBal(){view.tab='bal';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
   stMode(el){stS.mode=el.dataset.m;const t=trip(),me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,stS.other):suggestAmt(t,stS.other,me);renderSettle()},
-  payConfirm(el){const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
+  payConfirm(el){{const t=trip(),p=t.expenses.find(x=>x.id===el.dataset.id);const dup=p&&live(t).find(x=>x!==p&&x.type==='payment'&&x.from===p.from&&x.to===p.to&&x.amount===p.amount&&pstat(x)==='confirmed'&&Math.abs((x.createdAt||0)-(p.createdAt||0))<30*60000);
+    if(dup&&!confirm(`⚠️ 你${relTime(dup.confirmedAt||dup.createdAt)}已经确认过一笔一样的 ${fmt(p.amount,p.currency)}，这笔可能是重复的。\n真的收到了两次吗？`))return}const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
   payReject(el){if(!confirm('确定没收到这笔钱？会通知对方。'))return;const r=setPay(el.dataset.id,'rejected');if(!r)return;const{t,e}=r;toast('已告诉对方没收到');pushTo(t,[e.from],'✗ 对方说没收到',`${mname(t,e.to)} 说没收到你的 ${fmt(e.amount,e.currency)}，确认一下转账`,`?trip=${t.id}&tab=bal`,e.id)},
   payRemind(el){const r=setPay(el.dataset.id,'pending');if(!r)return;const{t,e}=r;toast(`🔔 已再次提醒 ${mname(t,e.to)}`);pushTo(t,[e.to],`💸 ${mname(t,e.from)} 提醒你确认还款`,`${mname(t,e.from)} 说已还你 ${fmt(e.amount,e.currency)}，点开确认一下`,`?trip=${t.id}&tab=bal`,e.id)},
   async pushOn(){await pushEnable();renderPushBox();const b=$('#pushban');if(b)b.innerHTML=''},
