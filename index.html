@@ -106,6 +106,10 @@ button:active,.chip:active,.pill:active,label.btn:active,.scanbtn:active{transfo
 .av.lg{width:38px;height:38px;font-size:15px}
 .av.emo{font-size:15px}.av.emo.lg{font-size:21px}
 .av.xl{width:84px;height:84px;font-size:34px;border:3px solid var(--card);box-shadow:var(--sh)}.av.emo.xl{font-size:44px}
+.whogrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.who{border:1.5px solid var(--line);background:var(--card);border-radius:18px;padding:14px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:14px}
+.who b{font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who small{color:var(--mut);font-size:11px}.who.lock{opacity:.5}
 .avgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0}
 .avgrid button{border:0;background:var(--card);border-radius:14px;font-size:24px;aspect-ratio:1;box-shadow:var(--sh)}
 .avgrid button.on{outline:2.5px solid var(--pri)}
@@ -252,7 +256,7 @@ const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣',
 const THEMES={mountain:{name:'旅途',icon:'✈️',c:['#2f6b5a','#6f957f']},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae']},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62']},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a']},
   sea:{name:'海边',icon:'🏖️',c:['#2c6470','#86b3b0']},tea:{name:'抹茶',icon:'🍵',c:['#55703a','#a3b98a']},sand:{name:'沙丘',icon:'🐫',c:['#8a6a3b','#c9ac7c']},stone:{name:'石板',icon:'🪨',c:['#4a5551','#8d9a95']}};
 const tEmoji=t=>!t.emoji||t.emoji==='⛰️'?'🧳':t.emoji;
-const theme=t=>THEMES[t&&t.theme]||THEMES.mountain;
+const theme=t=>THEMES[typeof S!=='undefined'&&S.prefs&&S.prefs.theme]||THEMES.mountain;
 const themesHTML=(cur,act)=>Object.entries(THEMES).map(([k,v])=>`<button class="th ${cur===k?'on':''}" style="--a:${v.c[0]};--b:${v.c[1]}" data-act="${act}" data-k="${k}">${v.icon}<br>${v.name}</button>`).join('');
 function greeting(){const h=new Date().getHours();return h<5?'夜深了 🌙 早点休息':h<11?'早安 ☀️ 今天去哪儿玩？':h<14?'午饭吃点好的 🍜':h<18?'下午茶时间 🧋':h<22?'晚上好 🌆 今天开心吗？':'夜深了 🌙 早点休息'}
 const dayDiff=(a,b)=>Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5);
@@ -271,7 +275,7 @@ function fmt(m,c){try{return new Intl.NumberFormat('zh-CN',{style:'currency',cur
 const plain=(m,c)=>String(+fromMinor(m,c).toFixed(digits(c)));
 
 /* ================= 存储 ================= */
-let S=load();S.seen=S.seen||{};S.prefs=Object.assign({toast:true,sound:true,vibrate:true},S.prefs||{});
+let S=load();S.seen=S.seen||{};S.pw=S.pw||{};S.prefs=Object.assign({toast:true,sound:true,vibrate:true},S.prefs||{});
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.trips)return Object.assign({order:[],me:{},cur:null,synced:{}},s)}catch{}return{trips:{},order:[],me:{},cur:null,synced:{}}}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('存储空间满了，试试删除部分收据照片')}}
 function save(){persist();scheduleFlush()}
@@ -282,7 +286,7 @@ const cloudOn=!!(CFG.supabaseUrl&&CFG.supabaseKey&&window.supabase&&!/YOUR_/.tes
 let sb=null;try{if(cloudOn)sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey)}catch(e){console.warn(e)}
 let syncState='ok',flushTimer=null,flushing=false,chan=null,chanKey='';
 function rowsOf(t){
-  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,theme:t.theme,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
+  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,code:t.code,pw:t.pw,owner:t.owner,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
   t.members.forEach(m=>rows.push({id:m.id,trip_id:t.id,kind:'member',data:m,updated_at:m.updatedAt||0}));
   t.expenses.forEach(e=>rows.push({id:e.id,trip_id:t.id,kind:'expense',data:e,updated_at:e.updatedAt||0}));
   return rows;
@@ -307,7 +311,7 @@ function remoteMsg(t,d,old){const w=mname(t,d.by),me=S.me[t.id],a=fmt(d.amount,d
     return `✅ ${mname(t,d.to)} 确认收到 ${mname(t,d.from)} 的 ${a}`}
   return `🔔 ${w} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${d.title} ${a}`}
 function setSync(s){syncState=s;const el=$('#syncdot');if(el)el.textContent=syncIcon(trip())}
-function syncIcon(t){if(!t||!t.cloud)return'⇅';return{ok:'☁️',busy:'⏳',err:'⚠️',offline:'📴'}[syncState]||'☁️'}
+function syncIcon(t){return{busy:'⏳',err:'⚠️',offline:'📴'}[syncState]||'👥'}
 function applyRow(r){
   if(!r||!r.id||!r.data)return;
   let t=S.trips[r.trip_id];
@@ -392,13 +396,13 @@ async function pushEnable(){
   try{say('开启中…');if((await Notification.requestPermission())!=='granted'){say('没有允许通知');return}
     const reg=await swReady();if(!reg)return say('后台服务没启动，刷新页面再试');
     const sub=(await reg.pushManager.getSubscription())||(await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(CFG.vapidPublicKey)}));
-    const n=await savePushRows(sub);if(!n){say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先回首页点右上角 🔗，粘贴群里的邀请链接加入旅行、选好你是谁，再回来开启。');return}toast('✅ 锁屏推送已开启');
+    const n=await savePushRows(sub);if(!n){say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先在首页点「加入旅行」输入房间码和密码、选好你是谁，再回来开启。');return}toast('✅ 锁屏推送已开启');
   }catch(e){say('没开成：'+(e&&e.message||'再试一次'))}
 }
 async function pushTest(){
   const box=$('#push-msg');const say=m=>{if(box)box.textContent=m};
   try{say('发送中…（锁屏或切到别的 App 更容易看到）');const reg=await swReady(),sub=reg&&await reg.pushManager.getSubscription();if(!sub)return renderPushBox();
-    if(!(await savePushRows(sub)))return say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先回首页点右上角 🔗，粘贴群里的邀请链接加入旅行、选好你是谁，再回来开启。');
+    if(!(await savePushRows(sub)))return say('⚠️ 这里还没有加入任何云端旅行，服务器不知道该通知谁。iPhone 主屏幕的旅账和 Safari 是分开的：先在首页点「加入旅行」输入房间码和密码、选好你是谁，再回来开启。');
     const r=await fetch(fnUrl(),{method:'POST',headers:fnHeaders(),body:JSON.stringify({endpoint:sub.endpoint,title:'🔔 旅账测试通知',text:'看到这条就说明锁屏推送可以用了！',url:'?tab=set'})}).then(x=>x.json()).catch(()=>({error:'net'}));
     if(r.error||r.message||r.msg)return say('推送服务出错了：'+(r.error||r.message||r.msg));
     say(r.sent?'✅ 已发出，几秒内会弹出通知':'没发出去：点「重新连接」再试');
@@ -407,23 +411,26 @@ async function pushTest(){
 async function pushReset(){
   try{const reg=await swReady();if(!reg)return;await reg.update().catch(()=>{});const old=await reg.pushManager.getSubscription();
     if(old){await sb.from('ts_push').delete().eq('endpoint',old.endpoint);await old.unsubscribe().catch(()=>{})}
-    await pushEnable();await pushTest();
+    await pushEnable();
   }catch(e){toast('没连上：'+(e&&e.message||''))}
 }
 async function renderPushBox(){
   const el=$('#push-box');if(!el)return;const st=await pushState().catch(()=>'unsupported');
-  const msg={on:'✅ 已开启。朋友记账、还钱、确认收款时，锁屏也会收到通知。',off:'App 关着也能收到「谁记了账、谁还了钱」。',
-    denied:'通知被拒绝了：到手机「设置 → 通知 → 旅账（或浏览器）」打开允许通知，再回来点重新连接。',
-    home:'iPhone 要先添加到主屏幕：点 Safari 底部的分享 → 添加到主屏幕，再从主屏幕的「旅账」打开，就能开启了（iOS 16.4 以上）。',
-    wechat:'微信里收不到锁屏推送：点右上角 ··· → 在浏览器打开。iPhone 还要添加到主屏幕。',
-    unsupported:'这个浏览器不支持锁屏推送（华为没有谷歌服务的手机通常不行），App 打开时仍会弹出提醒。',
-    nocloud:'开启云同步后才能用锁屏推送。'}[st];
-  el.innerHTML=`<div class="mut small" style="margin-bottom:8px">${msg}</div>
-   ${st==='off'?'<button class="btn primary block" data-act="pushOn">📲 开启锁屏推送</button>':''}
-   ${st==='on'?'<button class="btn block" data-act="pushTest">发一条测试通知</button><button class="btn ghost block" data-act="pushReset">收不到？重新连接</button>':''}
-   ${st==='denied'?'<button class="btn ghost block" data-act="pushReset">我已允许，重新连接</button>':''}
-   <div id="push-msg" class="small" style="text-align:center"></div><div id="push-diag" class="mut small" style="margin-top:8px;text-align:center"></div>`;
-  pushDiag();
+  const msg={on:'✅ 已开启。有人记账、还钱或确认收款时会通知你，锁屏也能收到。',off:'开启后，有人记账、还钱时会通知你，App 关着也能收到。',
+    denied:'通知被关掉了：到手机「设置 → 通知」里允许旅账（或浏览器）发通知。',
+    home:'iPhone 要先添加到主屏幕才能收通知：Safari 底部分享 → 添加到主屏幕，再从主屏幕打开。',
+    wechat:'微信里收不到通知：点右上角 ··· → 在浏览器打开。',
+    unsupported:'这个手机/浏览器收不到锁屏通知，打开 App 时仍会提醒你。',nocloud:'连不上云端，暂时不能开启通知。'}[st];
+  el.innerHTML=`<div class="mut small">${msg}</div>
+   ${st==='off'||st==='denied'?'<button class="btn primary block" data-act="pushOn">🔔 开启通知</button>':''}
+   ${st==='on'?'<div style="text-align:right"><button class="btn sm ghost" data-act="pushReset" style="margin-top:8px">收不到？重新连接</button></div>':''}
+   <div id="push-msg" class="small" style="text-align:center"></div>`;
+}
+async function pushBanner(){
+  const el=$('#pushban'),t=trip();if(!el||!t||!S.me[t.id]||S.prefs.pushNo)return;
+  const st=await pushState().catch(()=>'x');
+  if(st==='off')el.innerHTML=`<div class="banner" style="display:flex;align-items:center;gap:8px">🔔<span style="flex:1">开启通知，有人记账或还钱时提醒你</span><button class="btn sm primary" data-act="pushOn">开启</button><button class="btn sm" data-act="pushNo" aria-label="不用">✕</button></div>`;
+  else if(st==='home')el.innerHTML=`<div class="banner" style="display:flex;align-items:center;gap:8px">📲<span style="flex:1">添加到主屏幕后就能收到通知（Safari 分享 → 添加到主屏幕）</span><button class="btn sm" data-act="pushNo" aria-label="知道了">✕</button></div>`;
 }
 async function pushDiag(){
   const el=$('#push-diag');if(!el)return;const ok=b=>b?'✓':'✗',parts=[];
@@ -527,28 +534,29 @@ function render(){
   if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
   if(flashIds.size)setTimeout(()=>flashIds.clear(),1900);
   if(t&&view.tab==='set')renderPushBox();
+  if(t&&view.tab==='list')pushBanner();
   subscribe();
 }
 const avStack=(t,max=5)=>{const ms=activeM(t);return `<span class="avs">${ms.slice(0,max).map(m=>av(t,m.id)).join('')}${ms.length>max?`<span class="av" style="background:#94a3b8">+${ms.length-max}</span>`:''}</span>`};
 const unreadCount=t=>t.expenses.filter(e=>(e.updatedAt||0)>(S.seen[t.id]||0)&&e.by&&e.by!==S.me[t.id]).length;
 function homeView(){
-  const ids=S.order.filter(id=>S.trips[id]);
-  const cards=ids.map(id=>{const t=S.trips[id],me=S.me[id],th=theme(t);
+  const ids=S.order.filter(id=>S.trips[id]),th=theme();
+  const cards=ids.map(id=>{const t=S.trips[id],me=S.me[id];
     const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
     let bal='';if(me){const b=balances(t)[me]||0;bal=b>0?`<span class="pos">别人欠你 ${fmt(b,t.base)}</span>`:b<0?`<span class="neg">你欠别人 ${fmt(-b,t.base)}</span>`:`<span class="mut">已结清 ✓</span>`}
     const un=unreadCount(t);
     return `<div class="postcard" data-act="open" data-id="${id}" style="--a:${th.c[0]};--b:${th.c[1]}">
-      <div class="pc-top"><span class="pc-emoji">${tEmoji(t)}</span><span class="pc-stamp">${th.icon} ${th.name}${t.cloud?' · ☁️':''}</span></div>
+      <div class="pc-top"><span class="pc-emoji">${tEmoji(t)}</span><span class="pc-stamp">${t.code?'🔑 '+t.code:th.icon}</span></div>
       <div class="pc-body"><div class="pc-name">${esc(t.name)}${un?` <span class="badge" style="position:static;display:inline-block;border:0">${un}</span>`:''}</div>
       <div class="pc-meta">${avStack(t)}<span>${activeM(t).length} 人 · 一共 ${fmt(total,t.base)}</span></div>
       <div class="pc-bal">${bal}</div></div></div>`}).join('');
-  return `<header class="top"><div class="brand">旅账<small>和朋友一起的旅行账本</small></div><button class="icon" data-act="importSheet" title="导入">🔗</button></header>
+  return `<header class="top"><div class="brand">旅账<small>和朋友一起的旅行账本</small></div></header>
   <main class="wrap">
   <div class="hello-card">${greeting()}</div>
-  ${!ids.length&&typeof standalone==='function'&&standalone()?`<div class="banner">📲 这是主屏幕版的旅账，和浏览器里的数据是分开的。点右上角 🔗，粘贴群里的<b>邀请链接</b>，就能加入你们的旅行。</div>`:''}
   ${cards||`<div class="empty"><div class="e">🧳✈️🏝️</div><p>和朋友出去玩，谁付了钱、谁欠谁<br>交给旅账算清楚，大家只管开心 🎉</p></div>`}
-  <button class="btn primary block big" data-act="newTrip">＋ 开始一段新旅行</button>
-  <button class="btn ghost block" data-act="importSheet">🔗 收到朋友的邀请链接？点这里</button>
+  <button class="btn primary block big" data-act="newTrip">＋ 创建旅行</button>
+  <button class="btn block big" data-act="joinSheet">🔑 加入旅行</button>
+  ${!ids.length?`<p class="mut small" style="text-align:center">朋友创建了旅行？问 TA 要<b>房间码和密码</b>，点「加入旅行」</p>`:''}
   </main>`;
 }
 function tripView(t){
@@ -560,20 +568,20 @@ function tripView(t){
   const dayLbl=!first?'准备出发 ✈️':dn>0?`Day ${dn}`:'即将出发 ✈️';
   let meLine='';
   if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span data-act="avatar" style="display:flex;align-items:center;gap:6px;cursor:pointer">${av(t,me)}${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
-  const who=me?'':`<div class="banner"><b>👋 你是谁？</b><span class="mut small"> 选一下，就能看到「你欠 / 你借出」</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}" style="${m.device&&m.device!==DEV?'opacity:.45':''}">${av(t,m.id)}${esc(m.name)}${m.device&&m.device!==DEV?' 🔒':''}</button>`).join('')}</div><div class="mut small" style="margin-top:6px">🔒 = 已经被别的手机认领</div></div>`;
+  const who=me?'':`<div class="banner" data-act="who" style="cursor:pointer">👋 <b>先选一下你是谁</b>，才能记账和还钱 ›</div>`;
   const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
   const un=unreadCount(t);
   const nav=[['list','🧾','账单'],['bal','⚖️','结余'],null,['stats','📊','统计'],['set','⚙️','设置']];
   return `<header class="top"><button class="icon" data-act="home" aria-label="返回">‹</button><div class="ttl">${esc(t.name)}</div>
   <button class="icon" data-act="bell" aria-label="动态">🔔${un?`<b class="badge">${un>9?'9+':un}</b>`:''}</button>
-  <button class="icon" data-act="syncOut" title="邀请朋友" id="syncdot">${syncIcon(t)}</button></header>
-  <main class="wrap">${who}${me&&pendingFor(t,me).length?`<div class="banner" data-act="goBal" style="cursor:pointer">💸 有 <b>${pendingFor(t,me).length} 笔还款</b>等你确认收到 ›</div>`:''}
+  <button class="icon" data-act="invite" title="邀请朋友" id="syncdot">${syncIcon(t)}</button></header>
+  <main class="wrap">${who}<div id="pushban"></div>${me&&pendingFor(t,me).length?`<div class="banner" data-act="goBal" style="cursor:pointer">💸 有 <b>${pendingFor(t,me).length} 笔还款</b>等你确认收到 ›</div>`:''}
   <section class="hero">
    <div class="hero-row"><span class="stamp">${th.icon} ${dayLbl}</span><span class="greet">${greeting()}</span></div>
    <div class="lbl">大家一起花了</div>
    <div class="big" data-v="${total}">${fmt(total,t.base)}</div>
    <div class="hero-row" style="justify-content:flex-start;gap:10px;margin-top:6px">${avStack(t)}<span class="small" style="opacity:.92">${n} 人 · 人均 ${fmt(Math.round(total/n),t.base)}</span></div>
-   ${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}
+   ${meLine}
    <div class="hero-emoji">${tEmoji(t)}</div>
    <svg class="wave" viewBox="0 0 400 20" preserveAspectRatio="none"><path d="M0 12 C 60 2, 120 22, 200 12 S 340 2, 400 12 V20 H0Z" fill="var(--bg)"/></svg>
   </section>
@@ -673,29 +681,19 @@ function statsView(t){
   <div class="card"><h3>每日花费</h3><div class="days">${dayBars}</div></div>`;
 }
 function setView(t){
-  const me=S.me[t.id],hasEx=live(t).length>0,P=S.prefs;
-  const ms=activeM(t).map(m=>`<div class="mem">${me===m.id?`<button class="avbtn" data-act="avatar" aria-label="换头像">${av(t,m.id)}</button>`:av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':`<button data-act="setMe" data-id="${m.id}">设为我</button>`}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
-  const sw=(k,title,sub)=>`<div class="switch" style="margin:12px 0"><div><b>${title}</b><div class="mut small">${sub}</div></div><input type="checkbox" data-pref="${k}" ${P[k]?'checked':''}></div>`;
-  return `<div class="card"><h3>🎨 旅行信息</h3>
-   <label class="fld"><span>名称</span><input data-ts="name" value="${esc(t.name)}"></label>
-   <div class="fld"><span>主题配色</span></div><div class="themes">${themesHTML(THEMES[t.theme]?t.theme:'mountain','setTheme')}</div>
-   <div class="fld"><span>封面</span></div><div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
-   <label class="fld"><span>记账本位币 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
+  const me=S.me[t.id],hasEx=live(t).length>0,isOwner=!t.owner||t.owner===me;
+  const ms=activeM(t).map(m=>`<div class="mem">${me===m.id?`<button class="avbtn" data-act="avatar" aria-label="换头像">${av(t,m.id)}</button>`:av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':''}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
+  return `<div class="card"><h3>🔑 房间</h3>
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div class="mut small">房间码</div><div style="font-family:var(--display);font-size:30px;letter-spacing:4px">${esc(t.code||'——')}</div></div><button class="btn primary" data-act="invite">邀请朋友</button></div>
+   ${isOwner?`<div class="mem" style="margin-top:10px"><input id="newPw" type="text" placeholder="${t.pw?'改密码（至少 4 位）':'设一个密码（至少 4 位）'}" autocomplete="off"><button class="btn sm" data-act="setPw">保存</button></div>`:''}
+   <label class="fld"><span>旅行名称</span><input data-ts="name" value="${esc(t.name)}"></label>
+   <label class="fld"><span>结算币种 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
   <div class="card"><h3>👥 成员</h3>${me?`<button class="btn block" data-act="avatar" style="margin-top:0">${av(t,me)} 换我的头像</button>`:''}${ms}
    <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember">添加</button></div></div>
-  <div class="card"><h3>🔔 通知</h3>
-   ${sw('toast','朋友记账时弹出提醒','App 开着的时候，顶部弹出「谁记了什么」')}
-   ${sw('sound','提示音','叮咚一声（手机静音时不响）')}
-   ${sw('vibrate','震动','安卓手机有效，iPhone 网页不支持震动')}
-   <button class="btn block" data-act="testNotify">🔔 试一下 App 内提醒</button>
-   <div class="fld" style="margin-top:16px"><span>📲 锁屏推送（App 关着也能收到）</span></div><div id="push-box"><div class="mut small">检查中…</div></div>
-   <p class="mut small" style="margin:6px 2px 0">右上角 🔔 是全部动态，红点数字 = 你还没看过的朋友操作。</p></div>
-  <div class="card"><h3>☁️ 同步与备份</h3>
-   <button class="btn block" data-act="syncOut">${t.cloud?'🔗 邀请朋友加入':'⇅ 生成同步码 / 开启云同步'}</button>
-   <button class="btn block" data-act="importSheet">📥 导入朋友的同步码</button>
-   <button class="btn block" data-act="exportCSV">📄 导出 Excel 表格 (CSV)</button>
-   <button class="btn block" data-act="backup">💾 下载完整备份（含收据照片）</button></div>
-  <div class="card"><button class="btn danger block" data-act="delTrip">删除这个旅行</button></div>`;
+  <div class="card"><h3>🔔 通知</h3><div id="push-box"><div class="mut small">检查中…</div></div></div>
+  <div class="card"><h3>🎨 我的主题色</h3><div class="mut small" style="margin:-4px 0 8px">只改你自己手机上的颜色</div><div class="themes">${themesHTML(S.prefs.theme||'mountain','setTheme')}</div></div>
+  <div class="card"><button class="btn block" data-act="exportCSV" style="margin:0">📄 下载账单（Excel）</button></div>
+  <button class="btn danger block" data-act="delTrip">退出这个旅行</button>`;
 }
 /* ================= Sheet / 工具 ================= */
 function openSheet(html){const r=$('#sheet-root');r.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="sheet" id="sheet">${html}</div>`;r.classList.add('open');document.body.style.overflow='hidden'}
@@ -802,27 +800,81 @@ async function fetchRate(from,to){
 }
 
 /* ================= 新建旅行 ================= */
-let _nt={theme:'mountain'};
+const CODE_AB='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const randCode=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>CODE_AB[b%CODE_AB.length]).join('');
+async function hashPw(code,pw){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('lvzhang:'+code+':'+pw));return Array.from(new Uint8Array(d),b=>b.toString(16).padStart(2,'0')).join('')}
+async function findTrip(code){if(!sb)return null;const{data,error}=await sb.from('ts_rows').select('trip_id,data').eq('kind','trip').eq('data->>code',code).limit(1);if(error)throw error;return data&&data[0]||null}
+async function newCode(){for(let i=0;i<6;i++){const c=randCode();try{if(!(await findTrip(c)))return c}catch{return c}}return randCode()}
 function openNewTrip(){
-  _nt={theme:'mountain'};
-  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>开始新旅行 ✈️</b><button class="go" data-act="createTrip">创建</button></div>
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>创建旅行 ✈️</b><button class="go" data-act="createTrip">创建</button></div>
   <div class="sheet-body">
    <label class="fld"><span>去哪儿玩？</span><input id="nt-name" placeholder="例如：大阪京都 6 日游"></label>
-   <div class="fld"><span>选个心情</span></div><div class="themes" id="nt-themes">${themesHTML(_nt.theme,'ntTheme')}</div>
-   <label class="fld"><span>记账本位币（最后按这个币种结算）</span><select id="nt-base">${CUR.map(c=>`<option value="${c}">${c} ${CURNAME[c]}</option>`).join('')}</select></label>
+   <label class="fld"><span>房间密码（朋友加入时要输入，至少 4 位）</span><input id="nt-pw" type="text" autocomplete="off" placeholder="例如：8888"></label>
    <label class="fld"><span>你的名字</span><input id="nt-me" placeholder="我"></label>
-   <label class="fld"><span>一起去的朋友（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
-   <p class="mut small">之后也可以在「设置」里增删成员、换主题。</p></div>`);
+   <label class="fld"><span>一起去的朋友（空格或逗号隔开，可以之后再加）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
+   <label class="fld"><span>结算币种</span><select id="nt-base">${CUR.map(c=>`<option value="${c}">${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>`);
 }
-const THEME_EMOJI={mountain:'🧳',lake:'🛶',maple:'🍂',night:'🌙',sea:'🏖️',tea:'🍵',sand:'🐫',stone:'🧳'};
-function createTrip(){
-  const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value;
+async function createTrip(){
+  const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value,pw=$('#nt-pw').value.trim();
+  if(pw.length<4)return toast('密码至少 4 位');
   const meName=$('#nt-me').value.trim()||'我';
   const others=$('#nt-others').value.split(/[\s,，、;；]+/).map(s=>s.trim()).filter(Boolean);
   const names=[meName,...others.filter(n=>n!==meName)];
-  const t={id:uid(),name,base,theme:_nt.theme,emoji:THEME_EMOJI[_nt.theme]||'🧳',members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
-  t.members[0].device=DEV;S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
-  save();closeSheet();render();confetti();toast(sb?'出发啦 ✈️ 点右上角 ☁️ 邀请朋友':'出发啦 ✈️ 开始记账吧');
+  const go=$('[data-act=createTrip]');if(go){go.disabled=true;go.textContent='创建中…'}
+  const code=await newCode();
+  const members=names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()}));
+  members[0].device=DEV;
+  const t={id:uid(),name,base,emoji:'🧳',code,pw:await hashPw(code,pw),owner:members[0].id,members,expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
+  S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=members[0].id;S.pw[t.id]=pw;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
+  save();closeSheet();render();confetti();openInvite();
+}
+
+/* ================= 加入 / 你是谁 / 邀请 ================= */
+function openJoin(code=''){
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>加入旅行 🔑</b><button class="go" data-act="doJoin">加入</button></div>
+  <div class="sheet-body">
+   <label class="fld"><span>房间码</span><input id="jn-code" value="${esc(code)}" placeholder="6 位，例如 K7Q2MX" autocapitalize="characters" autocomplete="off" maxlength="6" style="font-family:var(--display);font-size:24px;letter-spacing:4px;text-transform:uppercase"></label>
+   <label class="fld"><span>密码</span><input id="jn-pw" type="text" autocomplete="off" placeholder="问创建旅行的朋友要"></label>
+   <p class="mut small">进去之后选一下你是谁，就可以一起记账了。</p></div>`);
+  setTimeout(()=>$(code?'#jn-pw':'#jn-code')?.focus(),250);
+}
+async function doJoin(){
+  const code=($('#jn-code').value||'').toUpperCase().replace(/[^A-Z0-9]/g,''),pw=$('#jn-pw').value.trim();
+  if(code.length!==6)return toast('房间码是 6 位');
+  const local=Object.values(S.trips).find(t=>t.code===code);
+  if(local){closeSheet();S.cur=local.id;view={tab:'list',q:'',cat:''};persist();render();refreshCurrent();if(!S.me[local.id])openWho();return}
+  if(!sb)return toast('没有连上云端');
+  const b=$('[data-act=doJoin]');if(b){b.disabled=true;b.textContent='加入中…'}
+  const reset=()=>{if(b){b.disabled=false;b.textContent='加入'}};
+  try{
+    const row=await findTrip(code);if(!row){reset();return toast('找不到这个房间码')}
+    if(row.data.pw&&row.data.pw!==await hashPw(code,pw)){reset();return toast('密码不对')}
+    if(!(await pullTrip(row.trip_id))){reset();return toast('房间是空的')}
+    const t=S.trips[row.trip_id];t.cloud=true;S.pw[t.id]=pw;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;persist();
+    closeSheet();render();openWho();
+  }catch(e){reset();toast('连接失败：'+(e.message||'检查网络'))}
+}
+function openWho(){
+  const t=trip();if(!t)return;
+  openSheet(`<div class="sheet-head"><span style="width:44px"></span><b>你是谁？👋</b><span style="width:44px"></span></div>
+  <div class="sheet-body"><p class="mut" style="text-align:center;margin-top:0">「${esc(t.name)}」里的哪一位？</p>
+   <div class="whogrid">${activeM(t).map(m=>{const lock=m.device&&m.device!==DEV;return `<button class="who${lock?' lock':''}" data-act="pickMe" data-id="${m.id}">${av(t,m.id,'lg')}<b>${esc(m.name)}</b>${lock?'<small>🔒 已有人</small>':''}</button>`}).join('')}</div>
+   <div class="mem" style="margin-top:14px"><input id="who-new" placeholder="名单里没有我？输入名字"><button class="btn sm primary" data-act="whoAdd">加入</button></div></div>`);
+}
+function claimMe(t,m){const old=S.me[t.id]&&mem(t,S.me[t.id]);if(old&&old.id!==m.id&&old.device===DEV){old.device=null;old.updatedAt=now()}
+  m.device=DEV;m.updatedAt=now();S.me[t.id]=m.id;save();closeSheet();render();pushSyncMe();toast(`👋 欢迎，${m.name}`)}
+async function openInvite(){
+  const t=trip();if(!t)return;
+  if(!t.code&&sb){t.code=await newCode();t.metaAt=now();save()}
+  const pw=S.pw[t.id],link=location.origin+location.pathname+'#join='+t.code;
+  const text=`一起来记账！「${t.name}」\n房间码：${t.code}${pw?`\n密码：${pw}`:''}\n打开 ${link}`;
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">完成</button><b>邀请朋友</b><span style="width:44px"></span></div>
+  <div class="sheet-body" style="text-align:center">
+   <div class="mut small">房间码</div><div style="font-family:var(--display);font-size:46px;letter-spacing:8px;line-height:1.2">${esc(t.code||'——')}</div>
+   <div class="mut small" style="margin-top:6px">密码</div><div style="font-family:var(--display);font-size:26px;letter-spacing:3px">${pw?esc(pw):'<span class="mut small">（问创建旅行的人）</span>'}</div>
+   <button class="btn primary block big" data-act="copyText" data-v="${esc(text)}" style="margin-top:18px">📋 复制邀请，发到群里</button>
+   ${navigator.share?`<button class="btn block" data-act="shareText" data-v="${esc(text)}">📤 分享</button>`:''}
+   <p class="mut small">朋友打开旅账 → 加入旅行 → 输入房间码和密码</p></div>`);
 }
 
 /* ================= 账单编辑器 ================= */
@@ -1061,7 +1113,7 @@ function mergeTrip(inc){
   const loc=S.trips[inc.id];
   if(!loc){S.trips[inc.id]=inc;if(!S.order.includes(inc.id))S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
   if(inc.cloud)loc.cloud=true;
-  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','theme','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
+  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','code','pw','owner','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
   for(const m of inc.members){const lm=mem(loc,m.id);if(!lm)loc.members.push(m);else if((m.updatedAt||0)>(lm.updatedAt||0))Object.assign(lm,m)}
   let added=0,updated=0;
   for(const e of inc.expenses){const le=loc.expenses.find(x=>x.id===e.id);
@@ -1078,7 +1130,7 @@ async function doImport(text){
   if(r.isNew&&!S.me[S.cur])toast(`已导入「${obj.trip.name}」，请选一下你是谁`);
   else toast(r.added||r.updated?`合并完成：新增 ${r.added} 笔，更新 ${r.updated} 笔`:'已经是最新的了 ✓');
 }
-async function openSyncOut(){
+async function openSyncOut(){return openInvite();
   const t=trip();
   if(t.cloud&&sb){
     const link=joinLink(t),st={ok:'☁️ 已全部同步',busy:'⏳ 正在上传…',err:'⚠️ 上传失败，稍后会自动重试',offline:'📴 离线中，联网后自动上传'}[syncState];
@@ -1109,7 +1161,7 @@ async function openSyncOut(){
    <p class="mut small">同步码不包含收据照片。链接约 ${Math.ceil((isWeb?link:code).length/1000)}k 字符。</p>
    ${sb?`<button class="btn primary block" data-act="cloudOn">☁️ 改用云同步（推荐，实时更新）</button>`:''}</div>`);
 }
-function openImport(){
+function openImport(){return openJoin();
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>导入 / 合并账本</b><button class="go" data-act="doImport">合并</button></div>
   <div class="sheet-body"><label class="fld"><span>粘贴朋友发来的同步码或同步链接</span><textarea id="imp-text" class="in code" placeholder="LZ1z.… 或 https://…#sync=…"></textarea></label>
   <button class="btn sm" data-act="pasteImport">📋 从剪贴板粘贴</button>
@@ -1191,11 +1243,11 @@ async function avatarFromFile(file){
 /* ================= 事件 ================= */
 const ACT={
   home(){S.cur=null;persist();render();scrollTo(0,0)},
-  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};animNext=true;persist();render();scrollTo(0,0);refreshCurrent()},
+  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};animNext=true;persist();render();scrollTo(0,0);refreshCurrent();if(!S.me[S.cur])openWho()},
   newTrip:openNewTrip,createTrip,
   tab(el){if(view.tab===el.dataset.t)return;view.tab=el.dataset.t;animNext=true;render();scrollTo({top:0,behavior:'smooth'});buzz(5)},
   bell(){view.tab='feed';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
-  setTheme(el){const t=trip();t.theme=el.dataset.k;t.metaAt=now();save();render();buzz(8)},
+  setTheme(el){S.prefs.theme=el.dataset.k;persist();render();buzz(8)},
   ntTheme(el){_nt.theme=el.dataset.k;document.querySelectorAll('#nt-themes .th').forEach(b=>b.classList.toggle('on',b===el));const th=THEMES[_nt.theme]||THEMES.mountain,rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1])},
   testNotify(){const t=trip(),o=activeM(t).find(m=>m.id!==S.me[t.id])||activeM(t)[0];notify(`🔔 ${o?o.name:'朋友'} 记了一笔：拉面 ${fmt(toMinor(980,'JPY'),'JPY')}`);if(!S.prefs.toast)toast('（弹出提醒已关闭）')},
   fcat(el){view.cat=el.dataset.c;animNext=true;render()},
@@ -1205,6 +1257,17 @@ const ACT={
     m.device=DEV;m.updatedAt=now();S.me[t.id]=m.id;save();render();pushSyncMe()},
   add(){const t=trip();if(!S.me[t.id]){toast('👋 先在上面选一下你是谁');scrollTo({top:0,behavior:'smooth'});return}openEditor(null)},
   avatar(){openAvatar()},
+  invite(){openInvite()},
+  joinSheet(){openJoin()},
+  doJoin(){doJoin()},
+  who(){openWho()},
+  pickMe(el){const t=trip(),m=mem(t,el.dataset.id);if(!m)return;
+    if(m.device&&m.device!==DEV&&!confirm(`「${m.name}」已经在另一台手机上了。\n只有你本人换了手机才选这个，确定是你吗？`))return;claimMe(t,m)},
+  whoAdd(){const t=trip(),n=($('#who-new').value||'').trim();if(!n)return toast('输入你的名字');
+    if(activeM(t).some(m=>m.name===n))return toast('名单里已经有「'+n+'」了，直接点它');
+    const m={id:uid(),name:n,color:COLORS[t.members.length%COLORS.length],updatedAt:now()};t.members.push(m);claimMe(t,m)},
+  async setPw(){const t=trip(),v=($('#newPw').value||'').trim();if(v.length<4)return toast('密码至少 4 位');if(!t.code){t.code=await newCode()}
+    t.pw=await hashPw(t.code,v);t.metaAt=now();S.pw[t.id]=v;save();render();toast('✓ 密码已更新')},
   avEmoji(el){setMyAvatar({avatar:el.dataset.e})},
   avColor(el){setMyAvatar({color:el.dataset.c})},
   avReset(){setMyAvatar({avatar:null})},
@@ -1213,7 +1276,8 @@ const ACT={
   payConfirm(el){const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
   payReject(el){if(!confirm('确定没收到这笔钱？会通知对方。'))return;const r=setPay(el.dataset.id,'rejected');if(!r)return;const{t,e}=r;toast('已告诉对方没收到');pushTo(t,[e.from],'✗ 对方说没收到',`${mname(t,e.to)} 说没收到你的 ${fmt(e.amount,e.currency)}，确认一下转账`,`?trip=${t.id}&tab=bal`,e.id)},
   payRemind(el){const r=setPay(el.dataset.id,'pending');if(!r)return;const{t,e}=r;toast(`🔔 已再次提醒 ${mname(t,e.to)}`);pushTo(t,[e.to],`💸 ${mname(t,e.from)} 提醒你确认还款`,`${mname(t,e.from)} 说已还你 ${fmt(e.amount,e.currency)}，点开确认一下`,`?trip=${t.id}&tab=bal`,e.id)},
-  async pushOn(){await pushEnable();renderPushBox()},
+  async pushOn(){await pushEnable();renderPushBox();const b=$('#pushban');if(b)b.innerHTML=''},
+  pushNo(){S.prefs.pushNo=true;persist();const b=$('#pushban');if(b)b.innerHTML=''},
   async pushTest(){await pushTest()},
   async pushReset(){await pushReset();renderPushBox()},
   edit(el){openEditor(el.dataset.id)},
@@ -1262,7 +1326,7 @@ const ACT={
   delMember(el){const t=trip(),id=el.dataset.id;
     if(live(t).some(e=>involves(e,id)))return toast('TA 已经有相关账单，不能删除');
     if(!confirm(`删除成员「${mname(t,id)}」？`))return;const m=mem(t,id);m.deleted=true;m.updatedAt=now();save();render()},
-  delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？${t.cloud?'只会从这台手机移除，云端和朋友手机上的不受影响（用邀请链接可以重新加入）。':'此操作无法撤销。'}`))return;
+  delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？只会从这台手机移除，朋友那边不受影响。之后用房间码和密码可以重新加入。`))return;
     delete S.trips[t.id];delete S.me[t.id];S.order=S.order.filter(x=>x!==t.id);S.cur=null;save();render();toast('已删除')},
 };
 let swipeBlock=0;
@@ -1317,8 +1381,9 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='ne
 (async()=>{
   const h=location.hash;
   if(h.startsWith('#sync=')){history.replaceState(null,'',location.pathname+location.search);render();await doImport(decodeURIComponent(h.slice(6)));}
-  else if(h.startsWith('#join=')){history.replaceState(null,'',location.pathname+location.search);render();await joinTrip(h.slice(6));}
+  else if(h.startsWith('#join=')){history.replaceState(null,'',location.pathname+location.search);render();const v=decodeURIComponent(h.slice(6));if(/^[A-Z0-9]{6}$/.test(v))openJoin(v);else await joinTrip(v);}
   else{const q=location.search;if(q)history.replaceState(null,'',location.pathname);if(!openFromUrl(q)){render();refreshCurrent()}}
+  if(sb){let ch=false;for(const t of Object.values(S.trips)){if(!t.cloud){t.cloud=true;ch=true}if(!t.code){t.code=randCode();t.metaAt=now();ch=true}}if(ch)save()}
   flush();pushSyncMe();
   navigator.serviceWorker&&navigator.serviceWorker.addEventListener('message',ev=>{if(ev.data&&ev.data.open!=null)openFromUrl(ev.data.open.replace(/^\.?\/?/,''))});
   addEventListener('online',()=>{refreshCurrent();flush()});
