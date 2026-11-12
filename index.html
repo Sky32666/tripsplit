@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="旅账">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>旅账 · 旅行 AA 记账</title>
+<style>
+:root{--bg:#f4f5f2;--card:#fff;--ink:#16201d;--mut:#6b7570;--line:#e3e6e1;--pri:#0f766e;--pri2:#14b8a6;--pos:#15803d;--neg:#c2410c;--chip:#eef1ec;--r:16px;--sh:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05)}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1210;--card:#161d1a;--ink:#e8eeeb;--mut:#93a29c;--line:#26302c;--chip:#1f2925;--pos:#4ade80;--neg:#fb923c;--sh:none}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink)}
+input,select,textarea,button{font:inherit;color:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.top .ttl{flex:1;font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.brand{flex:1;font-weight:800;font-size:22px;letter-spacing:.5px}
+.icon{border:0;background:var(--card);box-shadow:var(--sh);width:38px;height:38px;border-radius:12px;font-size:20px;display:grid;place-items:center}
+.wrap{max-width:560px;margin:0 auto;padding:4px 14px 130px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px;margin:12px 0}
+.mut{color:var(--mut)}.small{font-size:12.5px}.pos{color:var(--pos)}.neg{color:var(--neg)}
+.btn{border:0;border-radius:12px;padding:11px 16px;background:var(--chip);font-weight:600}
+.btn.primary{background:var(--pri);color:#fff}
+.btn.ghost{background:transparent;border:1.5px dashed var(--line);color:var(--mut)}
+.btn.danger{background:transparent;color:#dc2626;border:1.5px solid color-mix(in srgb,#dc2626 35%,transparent)}
+.btn.block{display:block;width:100%;margin:10px 0}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}
+.hero{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:22px;padding:18px;margin:8px 0 12px;box-shadow:0 8px 24px color-mix(in srgb,var(--pri) 35%,transparent)}
+.hero .lbl{opacity:.85;font-size:13px}.hero .big{font-size:32px;font-weight:800;letter-spacing:-.5px}
+.hero .me{margin-top:8px;background:rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;font-size:14px;display:flex;justify-content:space-between}
+.tabs{display:flex;background:var(--chip);border-radius:14px;padding:4px;gap:4px;position:sticky;top:calc(env(safe-area-inset-top) + 58px);z-index:4}
+.tabs button{flex:1;border:0;background:transparent;padding:8px 0;border-radius:10px;font-weight:600;color:var(--mut)}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+.tripc{display:flex;align-items:center;gap:12px;cursor:pointer}
+.tripc .em{font-size:28px;width:48px;height:48px;border-radius:14px;background:var(--chip);display:grid;place-items:center}
+.tripc .mid{flex:1;min-width:0}.tripc b{display:block;font-size:16px}
+.search{display:flex;gap:8px;margin:12px 0 6px}
+.search input{flex:1;border:0;background:var(--card);box-shadow:var(--sh);border-radius:12px;padding:10px 12px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:0;background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13.5px;white-space:nowrap}
+.chip.on{background:var(--pri);color:#fff}
+.dayh{display:flex;justify-content:space-between;margin:16px 4px 6px;font-size:13px;color:var(--mut);font-weight:600}
+.list{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:last-child{border-bottom:0}
+.row .ico{width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;font-size:20px;flex:none}
+.row .mid{flex:1;min-width:0}
+.row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .amt{text-align:right;font-size:13px;flex:none}
+.row .amt b{display:block;font-size:15px}
+.av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:12.5px;font-weight:700;flex:none;vertical-align:middle}
+.av.lg{width:36px;height:36px;font-size:15px}
+.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 18px);border:0;background:var(--pri);color:#fff;font-weight:700;font-size:16px;padding:15px 30px;border-radius:999px;box-shadow:0 10px 28px color-mix(in srgb,var(--pri) 45%,transparent);z-index:6}
+.empty{text-align:center;color:var(--mut);padding:40px 10px}
+.empty .e{font-size:44px}
+.brow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.brow:last-child{border-bottom:0}.brow .n{flex:1;font-weight:600}
+.xfer{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.xfer:last-child{border-bottom:0}.xfer .n{flex:1;min-width:0;font-size:14px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.switch input{width:44px;height:26px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;transition:.2s;flex:none}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch input:checked{background:var(--pri)}.switch input:checked::after{left:21px}
+h3{margin:4px 0 10px;font-size:15px}
+.stat4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat4 div{background:var(--chip);border-radius:12px;padding:10px 12px}
+.stat4 b{display:block;font-size:18px}
+.legend{display:grid;gap:6px;margin-top:8px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:14px}
+.legend i{width:10px;height:10px;border-radius:3px;flex:none}
+.legend span{flex:1}
+.bar{height:10px;border-radius:6px;background:var(--chip);overflow:hidden;margin:4px 0 2px}
+.bar i{display:block;height:100%;border-radius:6px}
+.days{display:flex;align-items:flex-end;gap:6px;height:140px;overflow-x:auto;padding-top:14px}
+.days div{flex:1 0 28px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10.5px;color:var(--mut)}
+.days i{display:block;width:70%;background:var(--pri2);border-radius:6px 6px 2px 2px;min-height:2px}
+.banner{background:color-mix(in srgb,var(--pri) 12%,var(--card));border-radius:14px;padding:12px;margin:8px 0}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px 5px 5px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.pill.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 12%,var(--card))}
+.pill:not(.on){opacity:.55}
+.pills.sm .pill{font-size:12.5px;padding:3px 9px 3px 3px}.pills.sm .av{width:20px;height:20px;font-size:10.5px}
+/* sheet */
+#sheet-root{position:fixed;inset:0;z-index:20;display:none}
+#sheet-root.open{display:block}
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.38);animation:fade .2s}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:600px;margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;max-height:94vh;display:flex;flex-direction:column;animation:up .25s cubic-bezier(.2,.9,.3,1)}
+@keyframes up{from{transform:translateY(60px)}}@keyframes fade{from{opacity:0}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head button{border:0;background:none;color:var(--mut);font-size:15px;padding:4px}
+.sheet-head .go{color:var(--pri);font-weight:700}
+.sheet-body{overflow-y:auto;padding:14px 16px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
+.fld{display:block;margin:10px 0}
+.fld>span{display:block;font-size:12.5px;color:var(--mut);margin:0 0 4px 2px;font-weight:600}
+.in,.fld input,.fld select,.fld textarea{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;outline:none}
+.in:focus,.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--pri)}
+.amtrow{display:flex;gap:8px;align-items:stretch;margin:10px 0}
+.amtrow select{width:96px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:0 8px;font-weight:700}
+.bigamt{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:10px 14px;font-size:28px;font-weight:800;min-width:0;outline:none}
+.bigamt:focus{border-color:var(--pri)}
+div.bigamt{color:var(--mut)}
+.ratebox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--chip);border-radius:12px;padding:8px 10px;font-size:14px}
+.ratebox input{width:110px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:6px 8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:2px;margin:14px 0 10px}
+.seg button{flex:1;border:0;background:none;border-radius:9px;padding:7px 0;font-size:13.5px;font-weight:600;color:var(--mut)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+.mrow{display:flex;align-items:center;gap:10px;padding:6px 0}
+.mrow .n{flex:1}.mrow input{width:120px;text-align:right;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:7px 10px}
+.item{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px;margin:8px 0}
+.item .r{display:flex;gap:6px;margin-bottom:8px}
+.item .r input{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 9px;min-width:0}
+.item .r input:first-child{flex:1}.item .r input:nth-child(2){width:100px;text-align:right}
+.item .r button{border:0;background:none;color:var(--mut);font-size:18px}
+.preview{background:var(--card);border-radius:14px;padding:10px 12px;margin:12px 0;font-size:14px}
+.preview .pr{display:flex;justify-content:space-between;align-items:center;padding:3px 0;gap:8px}
+.preview .pr>span:not(.av){flex:1}
+.err{color:#dc2626;font-weight:600}
+.ok{color:var(--pos);font-weight:600}
+.thumb{width:72px;height:72px;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:zoom-in}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:40;display:grid;place-items:center;padding:20px}
+.viewer img{max-width:100%;max-height:100%;border-radius:8px}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 16px);transform:translate(-50%,-80px);background:#111;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;transition:.25s;max-width:90vw;opacity:0}
+#toast.show{transform:translate(-50%,0);opacity:1}
+textarea.code{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,monospace;word-break:break-all}
+.step{display:flex;gap:10px;margin:8px 0;font-size:14px}.step b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--pri);color:#fff;display:grid;place-items:center;font-size:12px}
+.mem{display:flex;align-items:center;gap:8px;padding:6px 0}
+.mem input{flex:1;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;min-width:0}
+.mem button{border:0;background:none;color:var(--mut);font-size:13px;white-space:nowrap}
+.mem .tag{font-size:11.5px;background:var(--pri);color:#fff;border-radius:6px;padding:1px 6px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet-root"></div>
+<div id="toast"></div>
+<script>
+'use strict';
+/* ================= 基础 ================= */
+const $=(s,el=document)=>el.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-5);
+const now=()=>Date.now();
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const KEY='lvzhang.v1';
+
+const CATS=[['food','🍜','餐饮'],['transport','🚕','交通'],['stay','🏨','住宿'],['ticket','🎫','门票'],['shop','🛍️','购物'],['fun','🎉','娱乐'],['grocery','🛒','超市'],['drink','🧋','饮品'],['other','📌','其他']];
+const CATCOL={food:'#f97316',transport:'#3b82f6',stay:'#8b5cf6',ticket:'#ec4899',shop:'#eab308',fun:'#14b8a6',grocery:'#22c55e',drink:'#a16207',other:'#64748b'};
+const cat=k=>CATS.find(c=>c[0]===k)||CATS[CATS.length-1];
+const CUR=['CNY','USD','EUR','JPY','KRW','HKD','TWD','MOP','SGD','MYR','THB','VND','IDR','PHP','AUD','NZD','GBP','CAD','CHF'];
+const CURNAME={CNY:'人民币',USD:'美元',EUR:'欧元',JPY:'日元',KRW:'韩元',HKD:'港币',TWD:'新台币',MOP:'澳门元',SGD:'新加坡元',MYR:'马币',THB:'泰铢',VND:'越南盾',IDR:'印尼盾',PHP:'菲律宾比索',AUD:'澳元',NZD:'纽币',GBP:'英镑',CAD:'加元',CHF:'瑞郎'};
+const COLORS=['#0f766e','#c2410c','#7c3aed','#2563eb','#db2777','#65a30d','#ca8a04','#0891b2','#dc2626','#4f46e5','#9333ea','#059669'];
+const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸'];
+
+const _dg={};
+function digits(c){if(!(c in _dg)){try{_dg[c]=new Intl.NumberFormat('en',{style:'currency',currency:c}).resolvedOptions().maximumFractionDigits}catch{_dg[c]=2}}return _dg[c]}
+const fromMinor=(m,c)=>m/10**digits(c);
+const num=s=>{const v=parseFloat(String(s??'').replace(/[,，\s]/g,''));return isFinite(v)?v:0};
+const toMinor=(s,c)=>Math.round(num(s)*10**digits(c));
+function fmt(m,c){try{return new Intl.NumberFormat('zh-CN',{style:'currency',currency:c}).format(fromMinor(m,c))}catch{return c+' '+fromMinor(m,c).toFixed(2)}}
+const plain=(m,c)=>String(+fromMinor(m,c).toFixed(digits(c)));
+
+/* ================= 存储 ================= */
+let S=load();
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.trips)return Object.assign({order:[],me:{},cur:null},s)}catch{}return{trips:{},order:[],me:{},cur:null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('存储空间满了，试试删除部分收据照片')}}
+let view={tab:'list',q:'',cat:''};
+let ed=null;
+const trip=()=>S.trips[S.cur];
+const mem=(t,id)=>t.members.find(m=>m.id===id);
+const mname=(t,id)=>mem(t,id)?.name||'?';
+const activeM=t=>t.members.filter(m=>!m.deleted);
+const live=t=>t.expenses.filter(e=>!e.deleted);
+const av=(t,id,cls='')=>{const m=mem(t,id);return `<span class="av ${cls}" style="background:${m?.color||'#999'}">${esc((m?.name||'?').slice(0,1))}</span>`};
+
+/* ================= 计算核心 ================= */
+// 按权重把整数 total 分配，保证总和精确（最大余数法）
+function allocate(total,weights){
+  const ids=Object.keys(weights).filter(k=>weights[k]>0),out={};
+  const sum=ids.reduce((a,k)=>a+weights[k],0);
+  if(!sum||!total)return out;
+  let used=0;const fr=[];
+  for(const k of ids){const raw=total*weights[k]/sum,f=Math.floor(raw);out[k]=f;used+=f;fr.push([raw-f,k])}
+  fr.sort((a,b)=>b[0]-a[0]||(a[1]<b[1]?-1:1));
+  for(let r=total-used,i=0;r>0;r--,i=(i+1)%fr.length)out[fr[i][1]]++;
+  return out;
+}
+const ones=ids=>Object.fromEntries(ids.map(id=>[id,1]));
+function sharesOf(e){
+  if(e.type==='payment')return{[e.to]:e.amount};
+  const s=e.split,A=e.amount;
+  switch(s.mode){
+    case'equal':return allocate(A,ones(s.equal));
+    case'exact':return{...s.exact};
+    case'percent':return allocate(A,s.percent);
+    case'shares':return allocate(A,s.shares);
+    case'items':{const sub={};
+      for(const it of s.items){const a=allocate(it.amount,ones(it.people));for(const k in a)sub[k]=(sub[k]||0)+a[k]}
+      const ex=allocate(s.extra||0,sub);for(const k in ex)sub[k]=(sub[k]||0)+ex[k];return sub}
+  }return{};
+}
+const payersOf=e=>e.type==='payment'?{[e.from]:e.amount}:e.payers;
+function baseTotal(e,t){return e.currency===t.base?e.amount:Math.round(fromMinor(e.amount,e.currency)*e.rate*10**digits(t.base))}
+function baseSplit(e,t){const T=baseTotal(e,t);return{T,paid:allocate(T,payersOf(e)),owed:allocate(T,sharesOf(e))}}
+function balances(t){
+  const b={};t.members.forEach(m=>b[m.id]=0);
+  for(const e of live(t)){const{paid,owed}=baseSplit(e,t);for(const k in paid)b[k]=(b[k]||0)+paid[k];for(const k in owed)b[k]=(b[k]||0)-owed[k]}
+  return b;
+}
+function simplify(b){
+  const cr=[],db=[];for(const k in b){if(b[k]>0)cr.push([k,b[k]]);else if(b[k]<0)db.push([k,-b[k]])}
+  const res=[];
+  while(cr.length&&db.length){
+    cr.sort((a,b)=>b[1]-a[1]);db.sort((a,b)=>b[1]-a[1]);
+    const x=Math.min(cr[0][1],db[0][1]);res.push({from:db[0][0],to:cr[0][0],amt:x});
+    cr[0][1]-=x;db[0][1]-=x;if(!cr[0][1])cr.shift();if(!db[0][1])db.shift();
+  }return res;
+}
+function pairwise(t){
+  const d={};
+  for(const e of live(t)){const{T,paid,owed}=baseSplit(e,t);if(!T)continue;
+    for(const o in owed)for(const p in paid){if(o===p)continue;const x=owed[o]*paid[p]/T,k=o<p?o+'|'+p:p+'|'+o;d[k]=(d[k]||0)+(o<p?x:-x)}}
+  const res=[];for(const k in d){const[a,b]=k.split('|'),v=Math.round(d[k]);if(v>0)res.push({from:a,to:b,amt:v});else if(v<0)res.push({from:b,to:a,amt:-v})}
+  return res.sort((a,b)=>b.amt-a.amt);
+}
+const involves=(e,id)=>id in payersOf(e)||id in sharesOf(e);
+
+/* ================= 渲染 ================= */
+function render(){
+  const t=trip();
+  $('#app').innerHTML=t?tripView(t):homeView();
+}
+function homeView(){
+  const ids=S.order.filter(id=>S.trips[id]);
+  const cards=ids.map(id=>{const t=S.trips[id],me=S.me[id];
+    const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
+    let sub=`${activeM(t).length} 人 · 共 ${fmt(total,t.base)}`,right='';
+    if(me){const b=balances(t)[me]||0;right=b>0?`<div class="pos small">应收<br><b>${fmt(b,t.base)}</b></div>`:b<0?`<div class="neg small">应付<br><b>${fmt(-b,t.base)}</b></div>`:`<div class="mut small">已结清</div>`}
+    return `<div class="card tripc" data-act="open" data-id="${id}"><div class="em">${t.emoji||'🧳'}</div><div class="mid"><b>${esc(t.name)}</b><span class="mut small">${sub}</span></div><div style="text-align:right">${right}</div></div>`}).join('');
+  return `<header class="top"><div class="brand">🧳 旅账</div><button class="icon" data-act="importSheet" title="导入">📥</button></header>
+  <main class="wrap">
+  ${cards||`<div class="empty"><div class="e">🌏</div><p>和朋友出去玩，谁付了钱、谁欠谁，<br>交给旅账算清楚。</p></div>`}
+  <button class="btn primary block" data-act="newTrip">＋ 新建旅行</button>
+  <button class="btn ghost block" data-act="importSheet">📥 收到朋友的同步码？点这里导入</button>
+  <p class="mut small" style="text-align:center;margin-top:24px">数据只保存在本机浏览器 · 用同步码/同步链接和朋友合并账本</p>
+  </main>`;
+}
+function tripView(t){
+  const me=S.me[t.id];
+  const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
+  let meLine='';
+  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base):b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
+  const who=me?'':`<div class="banner"><b>你是谁？</b><span class="mut small"> 选一下，就能看到“你欠 / 你借出”</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
+  const tabs=[['list','账单'],['bal','结余'],['stats','统计'],['set','设置']];
+  const body={list:listView,bal:balView,stats:statsView,set:setView}[view.tab](t);
+  return `<header class="top"><button class="icon" data-act="home">‹</button><div class="ttl">${t.emoji||''} ${esc(t.name)}</div><button class="icon" data-act="syncOut" title="同步给朋友">⇅</button></header>
+  <main class="wrap">${who}
+  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big">${fmt(total,t.base)}</div>${meLine}</section>
+  <nav class="tabs">${tabs.map(([k,l])=>`<button class="${view.tab===k?'on':''}" data-act="tab" data-t="${k}">${l}</button>`).join('')}</nav>
+  <div id="tabbody">${body}</div></main>
+  ${view.tab==='list'||view.tab==='bal'?`<button class="fab" data-act="add">＋ 记一笔</button>`:''}`;
+}
+function listView(t){
+  return `<div class="search"><input id="search" type="search" placeholder="🔍 搜索账单、备注、人名" value="${esc(view.q)}"></div>
+  <div class="chips"><button class="chip ${!view.cat?'on':''}" data-act="fcat" data-c="">全部</button>${CATS.map(c=>`<button class="chip ${view.cat===c[0]?'on':''}" data-act="fcat" data-c="${c[0]}">${c[1]} ${c[2]}</button>`).join('')}<button class="chip ${view.cat==='settle'?'on':''}" data-act="fcat" data-c="settle">💸 还款</button></div>
+  <div id="explist">${listItems(t)}</div>`;
+}
+function listItems(t){
+  const q=view.q.trim().toLowerCase(),me=S.me[t.id];
+  let ex=live(t).filter(e=>{
+    if(view.cat&&(view.cat==='settle'?e.type!=='payment':e.category!==view.cat||e.type==='payment'))return false;
+    if(!q)return true;
+    const names=Object.keys({...payersOf(e),...sharesOf(e)}).map(id=>mname(t,id)).join(' ');
+    return (e.title+' '+(e.note||'')+' '+cat(e.category)[2]+' '+names).toLowerCase().includes(q);
+  });
+  if(!live(t).length)return `<div class="empty"><div class="e">🧾</div><p>还没有账单<br>点下面「记一笔」开始吧</p></div>`;
+  if(!ex.length)return `<div class="empty"><div class="e">🔍</div><p>没有找到匹配的账单</p></div>`;
+  ex.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
+  const groups={};ex.forEach(e=>(groups[e.date]=groups[e.date]||[]).push(e));
+  return Object.entries(groups).map(([d,arr])=>{
+    const dt=new Date(d+'T00:00');const wd='日一二三四五六'[dt.getDay()];
+    const dayTotal=arr.filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
+    return `<div class="dayh"><span>${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>rowHTML(t,e,me)).join('')}</div>`;
+  }).join('');
+}
+function rowHTML(t,e,me){
+  if(e.type==='payment'){
+    return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款</div></div><div class="amt"><b>${fmt(e.amount,e.currency)}</b></div></div>`;
+  }
+  const c=cat(e.category),pids=Object.keys(e.payers);
+  const payer=pids.length>1?`${pids.length} 人`:esc(mname(t,pids[0]));
+  const n=Object.keys(sharesOf(e)).length;
+  const foreign=e.currency!==t.base?` · ${fmt(e.amount,e.currency)}`:'';
+  let right=`<b>${fmt(baseTotal(e,t),t.base)}</b>`;
+  if(me){const{paid,owed}=baseSplit(e,t);const net=(paid[me]||0)-(owed[me]||0);
+    right=net>0?`<span class="pos">你借出<b>${fmt(net,t.base)}</b></span>`:net<0?`<span class="neg">你欠<b>${fmt(-net,t.base)}</b></span>`:`<span class="mut">不涉及<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
+    if(!(me in paid)&&!(me in owed))right=`<span class="mut">没参与<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
+  }
+  return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico">${c[1]}</div><div class="mid"><div class="t">${esc(e.title)}${e.receipt?' 📎':''}</div><div class="s">${payer} 付了 ${fmt(e.amount,e.currency)} · ${n} 人分</div></div><div class="amt">${right}</div></div>`;
+}
+function balView(t){
+  const b=balances(t),simp=t.simplify!==false;
+  const ms=t.members.filter(m=>!m.deleted||b[m.id]);
+  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${S.me[t.id]===m.id?' <span class="mut small">（我）</span>':''}</div><div style="text-align:right">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
+  const xs=simp?simplify(b):pairwise(t);
+  const xrows=xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b>${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已还</button></div>`).join('');
+  return `<div class="card"><h3>每个人的结余</h3>${rows||'<p class="mut">还没有成员</p>'}</div>
+  <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">合并转账，让还款次数最少</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
+  <div class="card"><h3>怎么还钱</h3>${xrows||`<div class="empty" style="padding:16px"><div class="e">🎉</div>大家都结清了</div>`}
+  ${xrows?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}
+  <button class="btn ghost block" data-act="settle">＋ 手动记录一笔还款</button></div>`;
+}
+function statsView(t){
+  const ex=live(t).filter(e=>e.type!=='payment');
+  if(!ex.length)return `<div class="empty"><div class="e">📊</div><p>记几笔账之后这里会出现图表</p></div>`;
+  const byCat={},byDay={},cons={},paid={};let total=0;
+  for(const e of ex){const{T,paid:p,owed:o}=baseSplit(e,t);total+=T;byCat[e.category]=(byCat[e.category]||0)+T;byDay[e.date]=(byDay[e.date]||0)+T;
+    for(const k in o)cons[k]=(cons[k]||0)+o[k];for(const k in p)paid[k]=(paid[k]||0)+p[k]}
+  const n=activeM(t).length||1,nd=Object.keys(byDay).length||1;
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const C=2*Math.PI*40;let off=0;
+  const arcs=cats.map(([k,v])=>{const len=v/total*C,s=`<circle r="40" cx="60" cy="60" fill="none" stroke="${CATCOL[k]||'#888'}" stroke-width="18" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`;off+=len;return s}).join('');
+  const donut=`<svg viewBox="0 0 120 120" width="150" height="150" style="flex:none">${arcs}<text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">总计</text><text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(fmt(total,t.base).replace(/\.\d+$/,''))}</text></svg>`;
+  const legend=cats.map(([k,v])=>`<div><i style="background:${CATCOL[k]}"></i><span>${cat(k)[1]} ${cat(k)[2]}</span><b>${Math.round(v/total*100)}%</b></div>`).join('');
+  const maxP=Math.max(...t.members.map(m=>Math.max(cons[m.id]||0,paid[m.id]||0)),1);
+  const ppl=t.members.filter(m=>cons[m.id]||paid[m.id]).map(m=>`<div style="margin:10px 0"><div style="display:flex;align-items:center;gap:8px">${av(t,m.id)}<b style="flex:1">${esc(m.name)}</b></div>
+    <div class="small mut" style="display:flex;justify-content:space-between;margin-top:4px"><span>消费</span><span>${fmt(cons[m.id]||0,t.base)}</span></div><div class="bar"><i style="width:${(cons[m.id]||0)/maxP*100}%;background:${m.color}"></i></div>
+    <div class="small mut" style="display:flex;justify-content:space-between"><span>垫付</span><span>${fmt(paid[m.id]||0,t.base)}</span></div><div class="bar"><i style="width:${(paid[m.id]||0)/maxP*100}%;background:${m.color};opacity:.45"></i></div></div>`).join('');
+  const days=Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])),maxD=Math.max(...days.map(d=>d[1]));
+  const dayBars=days.map(([d,v])=>`<div title="${d} ${fmt(v,t.base)}"><span style="margin-bottom:2px">${Math.round(fromMinor(v,t.base))}</span><i style="height:${v/maxD*100}%"></i><span>${+d.slice(5,7)}/${+d.slice(8)}</span></div>`).join('');
+  return `<div class="card"><div class="stat4"><div><span class="mut small">总花费</span><b>${fmt(total,t.base)}</b></div><div><span class="mut small">人均</span><b>${fmt(Math.round(total/n),t.base)}</b></div><div><span class="mut small">日均</span><b>${fmt(Math.round(total/nd),t.base)}</b></div><div><span class="mut small">账单数</span><b>${ex.length} 笔</b></div></div></div>
+  <div class="card"><h3>按类别</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut}<div class="legend" style="flex:1;min-width:150px">${legend}</div></div></div>
+  <div class="card"><h3>每人消费 vs 垫付</h3>${ppl}</div>
+  <div class="card"><h3>每日花费</h3><div class="days">${dayBars}</div></div>`;
+}
+function setView(t){
+  const me=S.me[t.id],hasEx=live(t).length>0;
+  const ms=activeM(t).map(m=>`<div class="mem">${av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':`<button data-act="setMe" data-id="${m.id}">设为我</button>`}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
+  return `<div class="card"><h3>旅行信息</h3>
+   <label class="fld"><span>名称</span><input data-ts="name" value="${esc(t.name)}"></label>
+   <div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
+   <label class="fld"><span>记账本位币 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
+  <div class="card"><h3>成员</h3>${ms}
+   <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember" style="color:#fff">添加</button></div></div>
+  <div class="card"><h3>同步与备份</h3>
+   <button class="btn block" data-act="syncOut">⇅ 生成同步码 / 同步链接</button>
+   <button class="btn block" data-act="importSheet">📥 导入朋友的同步码</button>
+   <button class="btn block" data-act="exportCSV">📄 导出 Excel 表格 (CSV)</button>
+   <button class="btn block" data-act="backup">💾 下载完整备份（含收据照片）</button></div>
+  <div class="card"><button class="btn danger block" data-act="delTrip">删除这个旅行</button></div>`;
+}
+
+/* ================= Sheet / 工具 ================= */
+function openSheet(html){const r=$('#sheet-root');r.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="sheet" id="sheet">${html}</div>`;r.classList.add('open');document.body.style.overflow='hidden'}
+function closeSheet(){const r=$('#sheet-root');r.classList.remove('open');r.innerHTML='';document.body.style.overflow='';ed=null}
+let _tt;function toast(m){const el=$('#toast');el.textContent=m;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2200)}
+async function copy(text){try{await navigator.clipboard.writeText(text);return true}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch{}ta.remove();return ok}}
+function download(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+async function compressImg(file){
+  const url=URL.createObjectURL(file),img=new Image();
+  await new Promise((r,j)=>{img.onload=r;img.onerror=j;img.src=url});
+  const s=Math.min(1,1100/Math.max(img.width,img.height)),cv=document.createElement('canvas');
+  cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);return cv.toDataURL('image/jpeg',.7);
+}
+async function fetchRate(from,to){
+  try{const j=await(await fetch(`https://open.er-api.com/v6/latest/${from}`)).json();if(j.rates?.[to])return j.rates[to]}catch{}
+  try{const j=await(await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`)).json();if(j.rates?.[to])return j.rates[to]}catch{}
+  return null;
+}
+
+/* ================= 新建旅行 ================= */
+function openNewTrip(){
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>新建旅行</b><button class="go" data-act="createTrip">创建</button></div>
+  <div class="sheet-body">
+   <label class="fld"><span>旅行名称</span><input id="nt-name" placeholder="例如：东京 5 日游"></label>
+   <label class="fld"><span>记账本位币（最后按这个币种结算）</span><select id="nt-base">${CUR.map(c=>`<option value="${c}">${c} ${CURNAME[c]}</option>`).join('')}</select></label>
+   <label class="fld"><span>你的名字</span><input id="nt-me" placeholder="我"></label>
+   <label class="fld"><span>朋友们（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="3" placeholder="小明 小红 阿杰"></textarea></label>
+   <p class="mut small">之后也可以在「设置」里增删成员。</p></div>`);
+  setTimeout(()=>$('#nt-name')?.focus(),250);
+}
+function createTrip(){
+  const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value;
+  const meName=$('#nt-me').value.trim()||'我';
+  const others=$('#nt-others').value.split(/[\s,，、;；]+/).map(s=>s.trim()).filter(Boolean);
+  const names=[meName,...others.filter(n=>n!==meName)];
+  const t={id:uid(),name,base,emoji:EMOJI[Math.floor(Math.random()*EMOJI.length)],members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now()};
+  S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.cur=t.id;view={tab:'list',q:'',cat:''};
+  save();closeSheet();render();toast('旅行已创建，开始记账吧');
+}
+
+/* ================= 账单编辑器 ================= */
+const MODES=[['equal','平均'],['exact','按金额'],['percent','按比例'],['shares','按份数'],['items','逐项']];
+function mapObj(o,f){const r={};for(const k in o)r[k]=f(o[k]);return r}
+function openEditor(id){
+  const t=trip(),M=activeM(t).map(m=>m.id),me=S.me[t.id]||M[0];
+  if(id){
+    const e=t.expenses.find(x=>x.id===id);if(!e)return;
+    if(e.type==='payment')return openSettle({id});
+    const c=e.currency,s=v=>v==null||v===''?'':plain(v,c),pids=Object.keys(e.payers),sp=e.split;
+    ed={id,isNew:false,title:e.title,category:e.category,date:e.date,currency:c,amountStr:s(e.amount),rate:c===t.base?'':String(e.rate),
+      payMode:pids.length>1?'multi':'single',payer:pids[0],payers:mapObj(e.payers,s),mode:sp.mode,
+      equal:sp.equal?[...sp.equal]:[...M],exact:mapObj(sp.exact||{},s),percent:mapObj(sp.percent||{},String),
+      shares:sp.shares?mapObj(sp.shares,String):mapObj(ones(M),String),
+      items:(sp.items||[]).map(it=>({name:it.name,amountStr:s(it.amount),people:[...it.people]})),extraStr:sp.extra?s(sp.extra):'',note:e.note||'',receipt:e.receipt||null};
+  }else{
+    const c=t.lastCurrency||t.base;
+    ed={id:null,isNew:true,title:'',category:'food',date:today(),currency:c,amountStr:'',rate:c===t.base?'':String(t.rates?.[c]||''),
+      payMode:'single',payer:me,payers:{},mode:'equal',equal:[...M],exact:{},percent:{},shares:mapObj(ones(M),String),
+      items:[],extraStr:'',note:'',receipt:null};
+  }
+  if(!ed.items.length)ed.items=[{name:'',amountStr:'',people:[...M]}];
+  openSheet('');renderEditor(true);
+}
+function renderEditor(focus){
+  const t=trip(),c=ed.currency;
+  const M=t.members.filter(m=>!m.deleted||involvedInEd(m.id));
+  const body=$('#sheet .sheet-body'),sc=body?body.scrollTop:0;
+  const pill=(id,on,act,extra='')=>`<button class="pill ${on?'on':''}" data-act="${act}" data-id="${id}" ${extra}>${av(t,id)}${esc(mname(t,id))}</button>`;
+  let split='';
+  if(ed.mode==='equal')split=`<div class="pills">${M.map(m=>pill(m.id,ed.equal.includes(m.id),'edTogEq')).join('')}</div><div style="margin-top:8px"><button class="btn sm" data-act="edEqAll">全选 / 全不选</button></div>`;
+  else if(ed.mode==='items'){
+    split=ed.items.map((it,i)=>`<div class="item"><div class="r"><input data-f="items.${i}.name" placeholder="品项，如 拉面" value="${esc(it.name)}"><input data-f="items.${i}.amountStr" inputmode="decimal" placeholder="金额" value="${esc(it.amountStr)}"><button data-act="edDelItem" data-i="${i}">✕</button></div><div class="pills sm">${M.map(m=>pill(m.id,it.people.includes(m.id),'edTogItem',`data-i="${i}"`)).join('')}</div></div>`).join('')+
+    `<button class="btn sm" data-act="edAddItem">＋ 加一项</button>
+     <div class="mrow" style="margin-top:8px"><div class="n">税 / 服务费 / 小费<div class="mut small">按每人品项金额比例分摊</div></div><input data-f="extraStr" inputmode="decimal" placeholder="0" value="${esc(ed.extraStr)}"></div>`;
+  }else{
+    const key=ed.mode,suf={exact:c,percent:'%',shares:'份'}[key];
+    split=M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="${key}.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed[key][m.id]??'')}"><span class="mut small" style="width:30px">${suf}</span></div>`).join('');
+    if(key==='percent')split+=`<button class="btn sm" data-act="edPctEven">平均分配百分比</button>`;
+  }
+  const multi=ed.payMode==='multi'?`<div class="card" style="margin:6px 0 0;padding:8px 12px"><div class="mut small">每人付了多少</div>${M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="payers.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed.payers[m.id]??'')}"><span class="mut small" style="width:30px">${c}</span></div>`).join('')}</div>`:'';
+  $('#sheet').innerHTML=`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>${ed.isNew?'记一笔':'编辑账单'}</b><button class="go" data-act="edSave">保存</button></div>
+  <div class="sheet-body">
+   <input class="in" data-f="title" placeholder="买了什么？例如：晚餐烧肉" value="${esc(ed.title)}" style="font-size:17px">
+   <div class="amtrow"><select data-f="currency">${CUR.map(x=>`<option value="${x}" ${x===c?'selected':''}>${x}</option>`).join('')}</select>
+    ${ed.mode==='items'?`<div class="bigamt" id="ed-total"></div>`:`<input class="bigamt" data-f="amountStr" inputmode="decimal" placeholder="0" value="${esc(ed.amountStr)}">`}</div>
+   ${c!==t.base?`<div class="ratebox">1 ${c} = <input data-f="rate" inputmode="decimal" placeholder="汇率" value="${esc(ed.rate)}"> ${t.base} <button class="btn sm" data-act="edRate">🌐 实时汇率</button><span id="ed-conv" class="mut small" style="width:100%"></span></div>`:''}
+   <div class="chips" style="margin-top:10px">${CATS.map(x=>`<button class="chip ${ed.category===x[0]?'on':''}" data-act="edCat" data-c="${x[0]}">${x[1]} ${x[2]}</button>`).join('')}</div>
+   <div class="grid2"><label class="fld"><span>日期</span><input type="date" data-f="date" value="${ed.date}"></label>
+    <label class="fld"><span>谁付的钱</span><select data-f="payer">${M.map(m=>`<option value="${m.id}" ${ed.payMode==='single'&&ed.payer===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}<option value="__multi" ${ed.payMode==='multi'?'selected':''}>多人一起付…</option></select></label></div>
+   ${multi}
+   <div class="seg">${MODES.map(([k,l])=>`<button class="${ed.mode===k?'on':''}" data-act="edMode" data-m="${k}">${l}</button>`).join('')}</div>
+   <div id="ed-split">${split}</div>
+   <div class="preview" id="ed-preview"></div>
+   <label class="fld"><span>备注</span><textarea data-f="note" rows="2" placeholder="可选">${esc(ed.note)}</textarea></label>
+   <div style="display:flex;gap:10px;align-items:center;margin:10px 0">
+    <label class="btn sm" style="cursor:pointer">📷 ${ed.receipt?'更换':'添加'}收据照片<input type="file" accept="image/*" id="ed-receipt" hidden></label>
+    ${ed.receipt?`<img class="thumb" src="${ed.receipt}" data-act="viewImg"><button class="btn sm" data-act="edDelReceipt">移除</button>`:''}</div>
+   ${ed.isNew?'':`<button class="btn danger block" data-act="edDel">删除这笔账单</button>`}
+  </div>`;
+  const nb=$('#sheet .sheet-body');if(nb)nb.scrollTop=sc;
+  edPreview();
+  if(focus&&ed.isNew)setTimeout(()=>$('[data-f="title"]')?.focus(),250);
+}
+function involvedInEd(id){return ed&&(ed.equal.includes(id)||ed.payer===id||id in ed.payers||ed.items.some(it=>it.people.includes(id))||num(ed.exact[id])||num(ed.percent[id]))}
+function edCompute(){
+  const t=trip(),c=ed.currency,err=[],mi=s=>toMinor(s,c);
+  const split={mode:ed.mode};let A;
+  if(ed.mode==='items'){
+    split.items=ed.items.map(it=>({name:it.name.trim(),amount:mi(it.amountStr),people:[...it.people]})).filter(it=>it.amount>0);
+    split.extra=mi(ed.extraStr);
+    A=split.items.reduce((a,it)=>a+it.amount,0)+split.extra;
+    if(!split.items.length)err.push('至少填一项的金额');
+    split.items.forEach((it,i)=>{if(!it.people.length)err.push(`「${it.name||'第'+(i+1)+'项'}」还没选谁吃/用了`)});
+  }else A=mi(ed.amountStr);
+  if(!(A>0))err.unshift('请输入金额');
+  if(ed.mode==='equal'){split.equal=[...ed.equal];if(!split.equal.length)err.push('至少选一个人分摊')}
+  if(ed.mode==='exact'){split.exact={};let s=0;for(const id in ed.exact){const v=mi(ed.exact[id]);if(v>0){split.exact[id]=v;s+=v}}
+    if(A>0&&s!==A)err.push(s<A?`还有 ${fmt(A-s,c)} 没分配`:`多分配了 ${fmt(s-A,c)}`)}
+  if(ed.mode==='percent'){split.percent={};let s=0;for(const id in ed.percent){const v=num(ed.percent[id]);if(v>0){split.percent[id]=v;s+=v}}
+    if(Math.abs(s-100)>0.01)err.push(`百分比合计 ${+s.toFixed(2)}%，需要等于 100%`)}
+  if(ed.mode==='shares'){split.shares={};let s=0;for(const id in ed.shares){const v=num(ed.shares[id]);if(v>0){split.shares[id]=v;s+=v}}if(!s)err.push('请填写份数')}
+  let payers;
+  if(ed.payMode==='single')payers={[ed.payer]:A};
+  else{payers={};let s=0;for(const id in ed.payers){const v=mi(ed.payers[id]);if(v>0){payers[id]=v;s+=v}}
+    if(A>0&&s!==A)err.push(`付款合计 ${fmt(s,c)}，和总额 ${fmt(A,c)} 不一致`)}
+  const rate=c===t.base?1:num(ed.rate);
+  if(c!==t.base&&!(rate>0))err.push(`请填写 ${c} → ${t.base} 汇率`);
+  return{e:{type:'expense',amount:A,currency:c,rate,payers,split},err,A};
+}
+function edPreview(){
+  if(!ed)return;const t=trip(),{e,err,A}=edCompute(),c=ed.currency;
+  const tot=$('#ed-total');if(tot)tot.textContent=fmt(A||0,c);
+  const conv=$('#ed-conv');if(conv)conv.textContent=A>0&&e.rate>0?`≈ ${fmt(baseTotal(e,t),t.base)}`:'';
+  let h='';
+  if(err.length)h=err.map(x=>`<div class="err">⚠️ ${esc(x)}</div>`).join('');
+  else{const sh=sharesOf(e),bs=baseSplit(e,t);
+    h=`<div class="ok" style="margin-bottom:4px">✓ 每人分摊</div>`+Object.keys(sh).map(id=>`<div class="pr">${av(t,id)}<span>${esc(mname(t,id))}</span><b>${fmt(sh[id],c)}</b>${c!==t.base?`<span class="mut small" style="flex:none">≈${fmt(bs.owed[id]||0,t.base)}</span>`:''}</div>`).join('');}
+  const p=$('#ed-preview');if(p)p.innerHTML=h;
+}
+function setPath(o,p,v){const ks=p.split('.');let x=o;for(let i=0;i<ks.length-1;i++)x=x[ks[i]];x[ks[ks.length-1]]=v}
+function edSave(){
+  const{e:calc,err}=edCompute();if(err.length){toast(err[0]);return}
+  const t=trip();
+  const e=ed.isNew?{id:uid(),createdAt:now()}:t.expenses.find(x=>x.id===ed.id);
+  for(const k of['payers','split','from','to'])delete e[k];
+  Object.assign(e,calc,{title:ed.title.trim()||cat(ed.category)[2],category:ed.category,date:ed.date||today(),note:ed.note.trim(),updatedAt:now()});
+  if(ed.receipt)e.receipt=ed.receipt;else delete e.receipt;
+  if(ed.isNew)t.expenses.push(e);
+  t.rates=t.rates||{};if(calc.currency!==t.base)t.rates[calc.currency]=calc.rate;t.lastCurrency=calc.currency;
+  save();closeSheet();render();toast('已保存 ✓');
+}
+
+/* ================= 还款 ================= */
+function openSettle({id,from,to,amt}={}){
+  const t=trip(),M=activeM(t),e=id&&t.expenses.find(x=>x.id===id);
+  from=e?e.from:from||S.me[t.id]||M[0]?.id;to=e?e.to:to||M.find(m=>m.id!==from)?.id;amt=e?e.amount:+amt||0;
+  const opts=sel=>t.members.filter(m=>!m.deleted||m.id===sel).map(m=>`<option value="${m.id}" ${m.id===sel?'selected':''}>${esc(m.name)}</option>`).join('');
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>${e?'编辑还款':'记录还款'}</b><button class="go" data-act="stSave" data-id="${e?e.id:''}">保存</button></div>
+  <div class="sheet-body">
+   <div class="grid2"><label class="fld"><span>谁还钱</span><select id="st-from">${opts(from)}</select></label><label class="fld"><span>还给谁</span><select id="st-to">${opts(to)}</select></label></div>
+   <div class="amtrow"><select disabled><option>${t.base}</option></select><input class="bigamt" id="st-amt" inputmode="decimal" placeholder="0" value="${amt?plain(amt,t.base):''}"></div>
+   <label class="fld"><span>日期</span><input type="date" id="st-date" value="${e?e.date:today()}"></label>
+   <p class="mut small">💡 记录后结余会自动更新。实际转账请用微信 / 支付宝 / PayID 等完成。</p>
+   ${e?`<button class="btn danger block" data-act="stDel" data-id="${e.id}">删除这笔还款</button>`:''}</div>`);
+}
+function stSave(el){
+  const t=trip(),from=$('#st-from').value,to=$('#st-to').value,amount=toMinor($('#st-amt').value,t.base);
+  if(from===to)return toast('还钱的人和收钱的人不能一样');
+  if(!(amount>0))return toast('请输入金额');
+  const id=el.dataset.id;const e=id?t.expenses.find(x=>x.id===id):{id:uid(),createdAt:now()};
+  Object.assign(e,{type:'payment',from,to,amount,currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now()});
+  if(!id)t.expenses.push(e);
+  save();closeSheet();render();toast('已记录还款 ✓');
+}
+
+/* ================= 同步（同步码 / 链接 / 文件） ================= */
+function b64e(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+async function encodeTrip(t){
+  const copy=JSON.parse(JSON.stringify(t));copy.expenses.forEach(e=>delete e.receipt);delete copy.lastCurrency;
+  const bytes=new TextEncoder().encode(JSON.stringify({v:1,trip:copy}));
+  if('CompressionStream' in window){try{const st=new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));return 'LZ1z.'+b64e(new Uint8Array(await new Response(st).arrayBuffer()))}catch{}}
+  return 'LZ1.'+b64e(bytes);
+}
+async function decodeAny(text){
+  text=text.trim();
+  const m=text.match(/LZ1z?\.[A-Za-z0-9_-]+/);
+  if(!m){const o=JSON.parse(text);return o.trip?o:{trip:o}}
+  const code=m[0];
+  if(code.startsWith('LZ1z.')){const st=new Blob([b64d(code.slice(5))]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return JSON.parse(await new Response(st).text())}
+  return JSON.parse(new TextDecoder().decode(b64d(code.slice(4))));
+}
+function mergeTrip(inc){
+  if(!inc||!inc.id||!Array.isArray(inc.members)||!Array.isArray(inc.expenses))throw new Error('bad');
+  const loc=S.trips[inc.id];
+  if(!loc){S.trips[inc.id]=inc;S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
+  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
+  for(const m of inc.members){const lm=mem(loc,m.id);if(!lm)loc.members.push(m);else if((m.updatedAt||0)>(lm.updatedAt||0))Object.assign(lm,m)}
+  let added=0,updated=0;
+  for(const e of inc.expenses){const le=loc.expenses.find(x=>x.id===e.id);
+    if(!le){loc.expenses.push(e);if(!e.deleted)added++}
+    else if((e.updatedAt||0)>(le.updatedAt||0)){const r=le.receipt;for(const k of Object.keys(le))delete le[k];Object.assign(le,e);if(r&&!e.deleted&&!le.receipt)le.receipt=r;updated++}}
+  loc.rates={...(inc.rates||{}),...(loc.rates||{})};
+  return{isNew:false,added,updated};
+}
+async function doImport(text){
+  let obj;try{obj=await decodeAny(text)}catch{return toast('同步码无法识别，请确认复制完整')}
+  let r;try{r=mergeTrip(obj.trip)}catch{return toast('数据格式不对')}
+  S.cur=obj.trip.id;view={tab:'list',q:'',cat:''};save();closeSheet();render();
+  if(r.isNew&&!S.me[S.cur])toast(`已导入「${obj.trip.name}」，请选一下你是谁`);
+  else toast(r.added||r.updated?`合并完成：新增 ${r.added} 笔，更新 ${r.updated} 笔`:'已经是最新的了 ✓');
+}
+async function openSyncOut(){
+  const t=trip(),code=await encodeTrip(t);
+  const isWeb=/^https?:/.test(location.protocol);
+  const link=isWeb?location.origin+location.pathname+'#sync='+code:'';
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>同步给朋友</b><span style="width:40px"></span></div>
+  <div class="sheet-body">
+   <div class="step"><b>1</b><div>把下面的${isWeb?'同步链接':'同步码'}发到旅行群里</div></div>
+   <div class="step"><b>2</b><div>朋友${isWeb?'点开链接':'在首页点「导入同步码」粘贴'}，账本会<b>自动合并</b>，不会重复</div></div>
+   <div class="step"><b>3</b><div>谁记了新账，就再发一次。每个人都可以记账 ✌️</div></div>
+   ${isWeb?`<button class="btn primary block" data-act="copyText" data-v="${esc(link)}">🔗 复制同步链接</button>`:''}
+   <button class="btn block" data-act="copyText" data-v="${esc(code)}">📋 复制同步码</button>
+   ${navigator.share?`<button class="btn block" data-act="shareText" data-v="${esc(isWeb?link:code)}">📤 用系统分享发送</button>`:''}
+   <textarea class="in code" readonly>${esc(isWeb?link:code)}</textarea>
+   <p class="mut small">同步码不包含收据照片。链接约 ${Math.ceil((isWeb?link:code).length/1000)}k 字符。</p></div>`);
+}
+function openImport(){
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>导入 / 合并账本</b><button class="go" data-act="doImport">合并</button></div>
+  <div class="sheet-body"><label class="fld"><span>粘贴朋友发来的同步码或同步链接</span><textarea id="imp-text" class="in code" placeholder="LZ1z.… 或 https://…#sync=…"></textarea></label>
+  <button class="btn sm" data-act="pasteImport">📋 从剪贴板粘贴</button>
+  <p class="mut small" style="margin-top:16px">或者导入备份文件（.json）：</p><label class="btn block" style="text-align:center;cursor:pointer">选择文件<input type="file" accept=".json,application/json,text/plain" id="imp-file" hidden></label></div>`);
+}
+
+/* ================= 导出 ================= */
+function exportCSV(){
+  const t=trip(),ms=t.members;
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const head=['日期','项目','类别','币种','金额','汇率',`折合${t.base}`,'付款人',...ms.map(m=>m.name+' 分摊'),'备注'];
+  const rows=live(t).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>{const{T,owed}=baseSplit(e,t);const p=payersOf(e);
+    return[e.date,e.type==='payment'?`还款 ${mname(t,e.from)}→${mname(t,e.to)}`:e.title,e.type==='payment'?'还款':cat(e.category)[2],e.currency,plain(e.amount,e.currency),e.rate,plain(T,t.base),
+      Object.keys(p).map(k=>mname(t,k)+(Object.keys(p).length>1?`(${plain(p[k],e.currency)})`:'')).join(' '),...ms.map(m=>owed[m.id]?plain(owed[m.id],t.base):''),e.note||''].map(q).join(',')});
+  const b=balances(t);
+  rows.push('',[q('结余'),'','','','','','','',...ms.map(m=>q(plain(b[m.id]||0,t.base)))].join(','));
+  download(`${t.name}.csv`,'﻿'+[head.map(q).join(','),...rows].join('\n'),'text/csv;charset=utf-8');
+}
+function backup(){const t=trip();download(`${t.name}-备份.json`,JSON.stringify({v:1,trip:t}),'application/json')}
+function summaryText(t){
+  const b=balances(t),xs=t.simplify!==false?simplify(b):pairwise(t);
+  const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
+  return `【${t.name}】结算清单\n总花费 ${fmt(total,t.base)} · ${activeM(t).length} 人\n\n`+xs.map(x=>`${mname(t,x.from)} → ${mname(t,x.to)}  ${fmt(x.amt,t.base)}`).join('\n')+'\n\n— 来自 旅账';
+}
+
+/* ================= 事件 ================= */
+const ACT={
+  home(){S.cur=null;save();render();scrollTo(0,0)},
+  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};save();render();scrollTo(0,0)},
+  newTrip:openNewTrip,createTrip,
+  tab(el){view.tab=el.dataset.t;render()},
+  fcat(el){view.cat=el.dataset.c;render()},
+  setMe(el){S.me[S.cur]=el.dataset.id;save();render()},
+  add(){openEditor(null)},
+  edit(el){openEditor(el.dataset.id)},
+  closeSheet,
+  edCat(el){ed.category=el.dataset.c;document.querySelectorAll('[data-act="edCat"]').forEach(b=>b.classList.toggle('on',b===el))},
+  edMode(el){const m=el.dataset.m,t=trip();
+    if(m==='exact'&&!Object.keys(ed.exact).length&&ed.mode==='equal'&&ed.amountStr){const{e}=edCompute();const sh=allocate(e.amount,ones(ed.equal));ed.exact=mapObj(sh,v=>plain(v,ed.currency))}
+    if(m==='percent'&&!Object.keys(ed.percent).length){const ids=ed.equal.length?ed.equal:activeM(t).map(x=>x.id);ids.forEach(id=>ed.percent[id]=String(+(100/ids.length).toFixed(2)))}
+    ed.mode=m;renderEditor()},
+  edTogEq(el){const id=el.dataset.id,i=ed.equal.indexOf(id);i<0?ed.equal.push(id):ed.equal.splice(i,1);el.classList.toggle('on',i<0);edPreview()},
+  edEqAll(){const M=activeM(trip()).map(m=>m.id);ed.equal=ed.equal.length===M.length?[]:[...M];renderEditor()},
+  edTogItem(el){const it=ed.items[+el.dataset.i],id=el.dataset.id,i=it.people.indexOf(id);i<0?it.people.push(id):it.people.splice(i,1);el.classList.toggle('on',i<0);edPreview()},
+  edAddItem(){ed.items.push({name:'',amountStr:'',people:activeM(trip()).map(m=>m.id)});renderEditor();const ins=document.querySelectorAll('.item .r input:first-child');ins[ins.length-1]?.focus()},
+  edDelItem(el){ed.items.splice(+el.dataset.i,1);if(!ed.items.length)ed.items.push({name:'',amountStr:'',people:activeM(trip()).map(m=>m.id)});renderEditor()},
+  edPctEven(){const ids=Object.keys(ed.percent).filter(k=>num(ed.percent[k])>0);const use=ids.length?ids:activeM(trip()).map(m=>m.id);ed.percent={};use.forEach(id=>ed.percent[id]=String(+(100/use.length).toFixed(4)));renderEditor()},
+  async edRate(el){const t=trip();el.textContent='获取中…';const r=await fetchRate(ed.currency,t.base);
+    if(r){ed.rate=String(+r.toPrecision(6));renderEditor();toast(`已更新：1 ${ed.currency} = ${ed.rate} ${t.base}`)}else{el.textContent='🌐 实时汇率';toast('获取失败，请手动填写汇率')}},
+  edDelReceipt(){ed.receipt=null;renderEditor()},
+  viewImg(el){const d=document.createElement('div');d.className='viewer';d.innerHTML=`<img src="${el.src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)},
+  edSave,
+  edDel(){if(!confirm('确定删除这笔账单？'))return;const e=trip().expenses.find(x=>x.id===ed.id);e.deleted=true;delete e.receipt;e.updatedAt=now();save();closeSheet();render();toast('已删除')},
+  settle(el){openSettle({from:el.dataset.from,to:el.dataset.to,amt:el.dataset.amt})},
+  stSave,
+  stDel(el){if(!confirm('确定删除这笔还款？'))return;const e=trip().expenses.find(x=>x.id===el.dataset.id);e.deleted=true;e.updatedAt=now();save();closeSheet();render()},
+  async copySummary(){toast(await copy(summaryText(trip()))?'已复制，去群里粘贴吧':'复制失败')},
+  syncOut:openSyncOut,
+  importSheet:openImport,
+  async copyText(el){toast(await copy(el.dataset.v)?'已复制 ✓':'复制失败，请长按文本框手动复制')},
+  async shareText(el){try{await navigator.share({title:'旅账同步',text:el.dataset.v})}catch{}},
+  async pasteImport(){try{$('#imp-text').value=await navigator.clipboard.readText()}catch{toast('请长按输入框手动粘贴')}},
+  doImport(){const v=$('#imp-text').value;if(!v.trim())return toast('先粘贴同步码');doImport(v)},
+  exportCSV,backup,
+  setEmoji(el){const t=trip();t.emoji=el.dataset.e;t.metaAt=now();save();render()},
+  addMember(){const t=trip(),inp=$('#newMember'),n=inp.value.trim();if(!n)return;
+    t.members.push({id:uid(),name:n,color:COLORS[t.members.length%COLORS.length],updatedAt:now()});save();render();toast(`已添加 ${n}`)},
+  delMember(el){const t=trip(),id=el.dataset.id;
+    if(live(t).some(e=>involves(e,id)))return toast('TA 已经有相关账单，不能删除');
+    if(!confirm(`删除成员「${mname(t,id)}」？`))return;const m=mem(t,id);m.deleted=true;m.updatedAt=now();save();render()},
+  delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？此操作无法撤销（朋友手机上的不受影响）。`))return;
+    delete S.trips[t.id];delete S.me[t.id];S.order=S.order.filter(x=>x!==t.id);S.cur=null;save();render();toast('已删除')},
+};
+document.addEventListener('click',ev=>{const el=ev.target.closest('[data-act]');if(!el)return;const f=ACT[el.dataset.act];if(f)f(el,ev)});
+document.addEventListener('input',ev=>{const el=ev.target;
+  if(ed&&el.dataset.f&&el.tagName!=='SELECT'){setPath(ed,el.dataset.f,el.value);edPreview()}
+  if(el.id==='search'){view.q=el.value;$('#explist').innerHTML=listItems(trip())}
+});
+document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
+  if(ed&&el.tagName==='SELECT'&&el.dataset.f){
+    if(el.dataset.f==='currency'){ed.currency=el.value;ed.rate=el.value===t.base?'':String(t.rates?.[el.value]||'');renderEditor()}
+    else if(el.dataset.f==='payer'){if(el.value==='__multi'){ed.payMode='multi';if(!Object.keys(ed.payers).length&&ed.amountStr)ed.payers={[ed.payer]:ed.amountStr}}else{ed.payMode='single';ed.payer=el.value}renderEditor()}
+  }
+  if(el.id==='ed-receipt'&&el.files[0]){try{ed.receipt=await compressImg(el.files[0]);renderEditor()}catch{toast('无法读取这张图片')}}
+  if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
+  if(el.dataset.ts&&t){const k=el.dataset.ts;
+    if(k==='name'){t.name=el.value.trim()||t.name;t.metaAt=now()}
+    if(k==='base'){t.base=el.value;t.metaAt=now()}
+    if(k==='simplify'){t.simplify=el.checked;t.metaAt=now()}
+    if(k==='mname'){const m=mem(t,el.dataset.id);m.name=el.value.trim()||m.name;m.updatedAt=now()}
+    save();render();
+  }
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='newMember')ACT.addMember()});
+
+/* ================= 启动 ================= */
+(async()=>{
+  const h=location.hash;
+  if(h.startsWith('#sync=')){history.replaceState(null,'',location.pathname+location.search);render();await doImport(decodeURIComponent(h.slice(6)));}
+  else render();
+  if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
