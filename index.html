@@ -348,7 +348,8 @@ function subscribe(){
   chanKey=key;if(!key)return;
   chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{const r=p.new;if(!r||!r.id)return;const t=S.trips[r.trip_id];
     if(t&&r.kind==='expense'&&r.updated_at>(S.synced[r.id]||0)){const d=r.data,old=t.expenses.find(x=>x.id===r.id),me=S.me[t.id];
-      if(d.by&&d.by!==me)notify(remoteMsg(t,d,old));
+      const tagOnly=old&&d.type==='payment'&&pstat(old)===pstat(d)&&!old.deleted===!d.deleted&&old.amount===d.amount;
+      if(d.by&&d.by!==me&&!tagOnly)notify(remoteMsg(t,d,old));
       if(!d.deleted)flashIds.add(r.id)}
     applyRow(r);persist();renderSoft()}).subscribe();
 }
@@ -639,9 +640,13 @@ function billLines(t){
   const bills=live(t).filter(e=>e.type!=='payment').sort((a,b)=>a.date.localeCompare(b.date)||(a.createdAt||0)-(b.createdAt||0));
   const out={};for(const e of bills)out[e.id]=billDebts(t,e).map(x=>({...x,bill:e.id,paid:0,pending:0}));
   const pool={},pend={},add=(o,k,v)=>{if(v>0)o[k]=(o[k]||0)+v};
-  for(const p of live(t)){if(p.type!=='payment')continue;const st=pstat(p);if(st!=='confirmed'&&st!=='pending')continue;
+  const pays=live(t).filter(p=>p.type==='payment'&&['confirmed','pending'].includes(pstat(p)));
+  pays.sort((a,b)=>(b.bills&&b.bills.length?1:0)-(a.bills&&a.bills.length?1:0)||(a.createdAt||0)-(b.createdAt||0));
+  for(const p of pays){const st=pstat(p);
     const k=p.from+'>'+p.to;let left=baseTotal(p,t);
-    for(const bid of p.bills||[]){const l=(out[bid]||[]).find(l=>l.from===p.from&&l.to===p.to);if(!l)continue;
+    let tags=p.bills&&p.bills.length?p.bills:null;
+    if(!tags){const m=bills.map(e=>(out[e.id]||[]).find(l=>l.from===p.from&&l.to===p.to&&l.amt===left&&!l.paid&&!l.pending)).find(Boolean);if(m){tags=[m.bill];_inf[p.id]=m.bill}else delete _inf[p.id]}
+    for(const bid of tags||[]){const l=(out[bid]||[]).find(l=>l.from===p.from&&l.to===p.to);if(!l)continue;
       const take=Math.min(left,l.amt-l.paid-l.pending);if(take<=0)continue;if(st==='confirmed')l.paid+=take;else l.pending+=take;left-=take}
     add(st==='confirmed'?pool:pend,k,left)}
   for(const e of bills)for(const l of out[e.id]){const k=l.from+'>'+l.to;
@@ -651,7 +656,9 @@ function billLines(t){
   return out;
 }
 const billName=(t,id)=>{const e=t.expenses.find(x=>x.id===id);return e?e.title:'已删除的账单'};
-const forTxt=(t,p)=>p&&p.bills&&p.bills.length?p.bills.map(id=>billName(t,id)).join('、'):'';
+const _inf={};
+const payBills=(t,p)=>{if(!p)return[];if(p.bills&&p.bills.length)return p.bills;if(p.type==='payment'&&!p.deleted){_blCache(t);if(_inf[p.id])return[_inf[p.id]]}return[]};
+const forTxt=(t,p)=>payBills(t,p).map(id=>billName(t,id)).join('、');
 function lineHTML(t,x,me){
   const cls=x.from===me?'neg':x.to===me?'pos':'';
   const amt=x.paid>=x.amt?`<b class="mut"><s>${fmt(x.amt,t.base)}</s> ✓ 已还</b>`:x.rest<=0?`<b class="mut">${fmt(x.amt,t.base)} ⏳ 待确认</b>`
@@ -1131,7 +1138,14 @@ function openPayment(e){
    <div style="display:flex;align-items:center;justify-content:center;gap:10px">${av(t,e.from,'lg')}<span style="font-size:22px">→</span>${av(t,e.to,'lg')}</div>
    <div style="margin-top:8px"><b>${esc(mname(t,e.from))}</b> 还给 <b>${esc(mname(t,e.to))}</b></div>${forTxt(t,e)?`<div class="chip" style="display:inline-block;margin-top:6px">🧾 ${esc(forTxt(t,e))}</div>`:''}
    <div style="font-family:var(--display);font-size:38px;line-height:1.2">${fmt(e.amount,e.currency)}</div>
-   <div class="mut small">${e.date} · ${label}</div></div>${btns}</div>`);
+   <div class="mut small">${e.date} · ${label}</div></div>${payTagHTML(t,e)}${btns}</div>`);
+}
+function payTagHTML(t,e){
+  const me=S.me[t.id];if(e.deleted||(me!==e.from&&me!==e.to))return'';
+  const BL=_blCache(t),cur=new Set(payBills(t,e));
+  const ls=Object.values(BL).flat().filter(l=>l.from===e.from&&l.to===e.to);if(!ls.length)return'';
+  return `<div class="fld"><span>这笔还的是哪一笔？（点选，可多选）</span></div><div class="card" style="margin:0 0 10px;padding:6px 12px">${ls.map(l=>{const b=t.expenses.find(x=>x.id===l.bill);
+    return `<label class="mrow" style="cursor:pointer"><input type="checkbox" data-paybill="${l.bill}" data-pid="${e.id}" ${cur.has(l.bill)?'checked':''} style="width:20px;height:20px;flex:none"><span class="n">${cat(b.category)[1]} ${esc(b.title)}</span><b>${fmt(l.amt,t.base)}</b></label>`}).join('')}</div>`;
 }
 function setPay(id,status){
   const t=trip(),me=S.me[t.id],e=t.expenses.find(x=>x.id===id);if(!e)return null;
@@ -1412,6 +1426,8 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   }
   if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
   if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];el.value='';if(!S.me[t.id])return toast('👋 先在上面选一下你是谁');openEditor(null);scanReceipt(f)}
+  if(el.dataset.paybill){const p=t.expenses.find(x=>x.id===el.dataset.pid);if(p){const cur=new Set(payBills(t,p));el.checked?cur.add(el.dataset.paybill):cur.delete(el.dataset.paybill);
+    p.bills=[...cur];if(!p.bills.length)delete p.bills;p.updatedAt=now();save();render();openPayment(p);toast(p.bills?'✓ 已标记：'+forTxt(t,p):'已取消标记')}}
   if(el.dataset.stbill&&stS){el.checked?stS.bills.add(el.dataset.stbill):stS.bills.delete(el.dataset.stbill);
     const sum=settleLines(t).filter(l=>stS.bills.has(l.bill)).reduce((a,l)=>a+l.rest,0);if(sum){stS.amt=sum;const a=$('#st-amt');if(a)a.value=plain(sum,t.base)}}
   if(el.id==='st-other'&&stS){stS.bills=new Set();stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);stS.amt=stS.amt;renderSettle()}
