@@ -3,21 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" content="#eef2ee">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="旅账">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700&display=swap">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>旅账 · 旅行 AA 记账</title>
 <style>
-:root{--bg:#f6f1e9;--card:#fffdf9;--ink:#1f2a2e;--mut:#7d8783;--line:#ece4d7;--pri:#0891b2;--pri2:#38bdf8;--pos:#16a34a;--neg:#e2552b;--chip:#f2ece2;--r:20px;--sh:0 1px 2px rgba(80,55,20,.04),0 6px 22px rgba(80,55,20,.07)}
-@media (prefers-color-scheme:dark){:root{--bg:#10151c;--card:#18212b;--ink:#e9eef2;--mut:#93a1ad;--line:#26313d;--chip:#212c38;--pos:#4ade80;--neg:#fb923c;--sh:none}}
+:root{--bg:#eef2ee;--card:#ffffff;--ink:#1f2a27;--mut:#64716c;--line:#d6dfda;--pri:#2f6b5a;--pri2:#6f957f;--pos:#2f7d55;--neg:#c8643b;--chip:#e3ece7;--soft:#d9e8e1;--display:"ZCOOL KuaiLe","PingFang SC","Hiragino Sans GB",sans-serif;--r:20px;--sh:0 1px 2px rgba(31,42,39,.04),0 4px 16px rgba(31,42,39,.06)}
+@media (prefers-color-scheme:dark){:root{--bg:#141b19;--card:#1d2724;--ink:#e6eeea;--mut:#97a6a0;--line:#2d3a36;--chip:#24312d;--soft:#24392f;--pos:#7cc4a8;--neg:#e9a25f;--sh:none;color-scheme:dark}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","HarmonyOS Sans SC","MiSans","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
-  background-image:radial-gradient(circle at 0% -5%,color-mix(in srgb,var(--pri2) 20%,transparent) 0,transparent 42%),radial-gradient(circle at 105% 18%,color-mix(in srgb,var(--pri) 12%,transparent) 0,transparent 38%);background-attachment:fixed}
+body{font:15px/1.55 "Noto Sans SC","PingFang SC","Hiragino Sans GB","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;-webkit-text-size-adjust:100%}
+.brand,.top .ttl,.hero .big,.pc-name,h3,.dayh b,.bigamt,.stat4 b,.empty p,.hello-card{font-family:var(--display);font-weight:400!important;letter-spacing:.02em}
 input,select,textarea,button{font:inherit;color:inherit}
 input,select,textarea{font-size:16px}
 button{cursor:pointer}
@@ -28,17 +29,17 @@ button{cursor:pointer}
 .icon{position:relative;border:0;background:var(--card);box-shadow:var(--sh);width:40px;height:40px;border-radius:14px;font-size:18px;display:grid;place-items:center;flex:none}
 .badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#ef4444;color:#fff;font-size:11px;line-height:19px;font-weight:700;border:2px solid var(--bg);animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
 .wrap{max-width:560px;margin:0 auto;padding:4px 14px calc(env(safe-area-inset-bottom) + 112px)}
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:none;padding:16px;margin:12px 0}
 .mut{color:var(--mut)}.small{font-size:12.5px}.pos{color:var(--pos)}.neg{color:var(--neg)}
 .btn{border:0;border-radius:14px;padding:12px 16px;background:var(--chip);font-weight:700}
-.btn.primary{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 6px 18px color-mix(in srgb,var(--pri) 28%,transparent)}
+.btn.primary{background:linear-gradient(160deg,var(--pri2),var(--pri));color:#fff;box-shadow:0 6px 18px color-mix(in srgb,var(--pri) 28%,transparent)}
 .btn.ghost{background:transparent;border:1.5px dashed color-mix(in srgb,var(--mut) 45%,transparent);color:var(--mut)}
 .btn.danger{background:transparent;color:#dc2626;border:1.5px solid color-mix(in srgb,#dc2626 35%,transparent)}
 .btn.block{display:block;width:100%;margin:10px 0;text-align:center}
 .btn.big{padding:15px;font-size:16px}
 .btn.sm{padding:7px 12px;font-size:13px;border-radius:11px}
 /* hero = 明信片 */
-.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:26px;padding:14px 18px 34px;margin:6px 0 8px;box-shadow:0 14px 32px color-mix(in srgb,var(--pri) 30%,transparent)}
+.hero{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--pri2),var(--pri));color:#fff;border-radius:26px;padding:14px 18px 34px;margin:6px 0 8px;box-shadow:0 14px 32px color-mix(in srgb,var(--pri) 30%,transparent)}
 .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.12)}
 .hero .lbl{opacity:.9;font-size:13px;margin-top:12px;position:relative;z-index:1}
 .hero .big{font-size:34px;font-weight:900;letter-spacing:-.5px;font-variant-numeric:tabular-nums;position:relative;z-index:1;line-height:1.2}
@@ -52,9 +53,9 @@ button{cursor:pointer}
 .avs{display:inline-flex;align-items:center}.avs .av{border:2px solid rgba(255,255,255,.85);margin-left:-8px;width:27px;height:27px}.avs .av:first-child{margin-left:0}
 /* 首页明信片 */
 .hello-card{font-size:15px;color:var(--mut);margin:2px 2px 4px}
-.postcard{background:var(--card);border-radius:22px;box-shadow:var(--sh);margin:14px 0;overflow:hidden;cursor:pointer;transition:transform .15s}
+.postcard{background:var(--card);border:1px solid var(--line);border-radius:22px;margin:14px 0;overflow:hidden;cursor:pointer;transition:transform .15s}
 .postcard:active{transform:scale(.98)}
-.pc-top{height:82px;background:linear-gradient(135deg,var(--a),var(--b));display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;position:relative;overflow:hidden}
+.pc-top{height:82px;background:linear-gradient(160deg,var(--b),var(--a));display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;position:relative;overflow:hidden}
 .pc-top::after{content:"";position:absolute;right:-30px;bottom:-50px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.15)}
 .pc-emoji{font-size:44px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2))}
 .pc-stamp{border:1.5px dashed rgba(255,255,255,.85);color:#fff;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:800;transform:rotate(3deg)}
@@ -68,19 +69,19 @@ button{cursor:pointer}
 .bnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0 2px;color:var(--mut);font-size:11.5px;font-weight:700}
 .bnav i{font-style:normal;font-size:21px;line-height:1.2;filter:grayscale(.85);opacity:.65;transition:transform .25s cubic-bezier(.2,1.4,.4,1),filter .2s,opacity .2s}
 .bnav .on{color:var(--pri)}.bnav .on i{filter:none;opacity:1;transform:translateY(-3px) scale(1.15)}
-.bnav .plus{flex:none;width:58px;height:58px;margin:-28px 4px 4px;border-radius:20px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font-size:30px;font-weight:400;box-shadow:0 10px 24px color-mix(in srgb,var(--pri) 45%,transparent);justify-content:center;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+.bnav .plus{flex:none;width:58px;height:58px;margin:-28px 4px 4px;border-radius:20px;background:linear-gradient(160deg,var(--pri2),var(--pri));color:#fff;font-size:30px;font-weight:400;box-shadow:0 10px 24px color-mix(in srgb,var(--pri) 45%,transparent);justify-content:center;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
 @keyframes pop{from{transform:scale(.6);opacity:0}}
 /* 列表 */
 .search{display:flex;gap:8px;margin:8px 0 4px}
 .search input{flex:1;min-width:0;border:0;background:var(--card);box-shadow:var(--sh);border-radius:14px;padding:10px 14px;outline:none}
-.scanbtn{flex:none;display:flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:14px;padding:0 14px;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 28%,transparent)}
+.scanbtn{flex:none;display:flex;align-items:center;gap:4px;background:linear-gradient(160deg,var(--pri2),var(--pri));color:#fff;border-radius:14px;padding:0 14px;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 28%,transparent)}
 .chips{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:0;background:var(--card);box-shadow:var(--sh);border-radius:999px;padding:6px 12px;font-size:13.5px;white-space:nowrap}
-.chip.on{background:var(--ink);color:var(--bg)}
+.chip.on{background:var(--pri);color:#fff}
 .dayh{display:flex;justify-content:space-between;align-items:baseline;margin:16px 6px 7px;font-size:13px;color:var(--mut);font-weight:600}
 .dayh b{color:var(--ink);font-size:15px;font-weight:900;margin-right:2px}
-.list{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .sw:last-child>.row{border-bottom:0}
 .sw{position:relative;overflow:hidden}
@@ -137,14 +138,14 @@ h3{margin:2px 0 10px;font-size:15.5px;font-weight:800}
 .days{display:flex;align-items:flex-end;gap:6px;height:150px;overflow-x:auto;padding-top:14px}
 .days div{flex:1 0 30px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10.5px;color:var(--mut)}
 .days i{display:block;width:70%;background:linear-gradient(var(--pri2),var(--pri));border-radius:8px 8px 3px 3px;min-height:3px}
-.banner{background:color-mix(in srgb,var(--pri) 13%,var(--card));border-radius:16px;padding:12px;margin:8px 0}
+.banner{background:var(--soft);border-radius:16px;padding:12px;margin:8px 0}
 .pills{display:flex;flex-wrap:wrap;gap:6px}
 .pill{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px 5px 5px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
 .pill.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 13%,var(--card))}
 .pill:not(.on){opacity:.5}
 .pills.sm .pill{font-size:12.5px;padding:3px 9px 3px 3px}.pills.sm .av{width:20px;height:20px;font-size:10.5px}
 .themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
-.th{border:2.5px solid transparent;border-radius:14px;padding:9px 2px;color:#fff;font-weight:800;font-size:12px;line-height:1.35;background:linear-gradient(135deg,var(--a),var(--b));text-align:center}
+.th{border:2.5px solid transparent;border-radius:14px;padding:9px 2px;color:#fff;font-weight:800;font-size:12px;line-height:1.35;background:linear-gradient(160deg,var(--b),var(--a));text-align:center}
 .th.on{border-color:var(--ink);transform:scale(1.04)}
 /* 弹窗 */
 #sheet-root{position:fixed;inset:0;z-index:20;display:none}
@@ -156,7 +157,7 @@ h3{margin:2px 0 10px;font-size:15.5px;font-weight:800}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:20px 16px 12px;border-bottom:1px solid var(--line);flex:none}
 .sheet-head b{font-size:16px}
 .sheet-head button{border:0;background:none;color:var(--mut);font-size:15.5px;padding:6px 4px;min-width:44px}
-.sheet-head .go{color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;padding:7px 16px;font-weight:800}
+.sheet-head .go{color:#fff;background:linear-gradient(160deg,var(--pri2),var(--pri));border-radius:12px;padding:7px 16px;font-weight:800}
 .sheet-body{flex:1;min-height:0;overflow-y:auto;padding:14px 16px calc(env(safe-area-inset-bottom) + 28px);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .fld{display:block;margin:12px 0;min-width:0}
 .fld>span{display:block;font-size:12.5px;color:var(--mut);margin:0 0 5px 2px;font-weight:700}
@@ -236,11 +237,11 @@ const CATCOL={food:'#f97316',transport:'#3b82f6',stay:'#8b5cf6',ticket:'#ec4899'
 const cat=k=>CATS.find(c=>c[0]===k)||CATS[CATS.length-1];
 const CUR=['CNY','USD','EUR','JPY','KRW','HKD','TWD','MOP','SGD','MYR','THB','VND','IDR','PHP','AUD','NZD','GBP','CAD','CHF'];
 const CURNAME={CNY:'人民币',USD:'美元',EUR:'欧元',JPY:'日元',KRW:'韩元',HKD:'港币',TWD:'新台币',MOP:'澳门元',SGD:'新加坡元',MYR:'马币',THB:'泰铢',VND:'越南盾',IDR:'印尼盾',PHP:'菲律宾比索',AUD:'澳元',NZD:'纽币',GBP:'英镑',CAD:'加元',CHF:'瑞郎'};
-const COLORS=['#0f766e','#c2410c','#7c3aed','#2563eb','#db2777','#65a30d','#ca8a04','#0891b2','#dc2626','#4f46e5','#9333ea','#059669'];
+const COLORS=['#2f6b5a','#b8733a','#6b5b95','#3f6f8f','#a0525e','#5f7f3a','#8a6a3b','#2f5d6b','#7a4f6b','#4a5551','#9a5b2c','#55703a'];
 const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸','🏖️','🎡','🗼','⛩️','🐫','🚢'];
-const THEMES={sea:{name:'海岛',icon:'🏝️',c:['#0891b2','#38bdf8']},sunset:{name:'日落',icon:'🌅',c:['#f97316','#ec4899']},sakura:{name:'樱花',icon:'🌸',c:['#db2777','#f9a8d4']},snow:{name:'雪山',icon:'🏔️',c:['#4f46e5','#a78bfa']},
-  forest:{name:'森林',icon:'🌿',c:['#15803d','#84cc16']},city:{name:'城市夜',icon:'🌃',c:['#1e293b','#6366f1']},desert:{name:'沙漠',icon:'🐫',c:['#c2410c','#facc15']},lagoon:{name:'泻湖',icon:'🐠',c:['#0d9488','#a3e635']}};
-const theme=t=>THEMES[t&&t.theme]||THEMES.sea;
+const THEMES={mountain:{name:'山野',icon:'⛰️',c:['#2f6b5a','#6f957f']},lake:{name:'湖畔',icon:'🛶',c:['#2f5d6b','#7fa6ae']},maple:{name:'秋日',icon:'🍂',c:['#9a5b2c','#d39a62']},night:{name:'夜空',icon:'🌙',c:['#2d3b4a','#61788a']},
+  sea:{name:'海边',icon:'🏖️',c:['#2c6470','#86b3b0']},tea:{name:'抹茶',icon:'🍵',c:['#55703a','#a3b98a']},sand:{name:'沙丘',icon:'🐫',c:['#8a6a3b','#c9ac7c']},stone:{name:'石板',icon:'🪨',c:['#4a5551','#8d9a95']}};
+const theme=t=>THEMES[t&&t.theme]||THEMES.mountain;
 const themesHTML=(cur,act)=>Object.entries(THEMES).map(([k,v])=>`<button class="th ${cur===k?'on':''}" style="--a:${v.c[0]};--b:${v.c[1]}" data-act="${act}" data-k="${k}">${v.icon}<br>${v.name}</button>`).join('');
 function greeting(){const h=new Date().getHours();return h<5?'夜深了 🌙 早点休息':h<11?'早安 ☀️ 今天去哪儿玩？':h<14?'午饭吃点好的 🍜':h<18?'下午茶时间 🧋':h<22?'晚上好 🌆 今天开心吗？':'夜深了 🌙 早点休息'}
 const dayDiff=(a,b)=>Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5);
@@ -407,7 +408,7 @@ const _heroPrev={},flashIds=new Set();let animNext=true;
 function render(){
   const t=trip();
   const th=theme(t),rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1]);
-  const mc=$('meta[name=theme-color]');if(mc)mc.content=th.c[0];
+  
   $('#app').innerHTML=t?tripView(t):homeView();
   animNext=false;
   if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
@@ -558,7 +559,7 @@ function setView(t){
   const sw=(k,title,sub)=>`<div class="switch" style="margin:12px 0"><div><b>${title}</b><div class="mut small">${sub}</div></div><input type="checkbox" data-pref="${k}" ${P[k]?'checked':''}></div>`;
   return `<div class="card"><h3>🎨 旅行信息</h3>
    <label class="fld"><span>名称</span><input data-ts="name" value="${esc(t.name)}"></label>
-   <div class="fld"><span>主题配色</span></div><div class="themes">${themesHTML(t.theme||'sea','setTheme')}</div>
+   <div class="fld"><span>主题配色</span></div><div class="themes">${themesHTML(THEMES[t.theme]?t.theme:'mountain','setTheme')}</div>
    <div class="fld"><span>封面</span></div><div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
    <label class="fld"><span>记账本位币 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
   <div class="card"><h3>👥 成员</h3>${ms}
@@ -681,9 +682,9 @@ async function fetchRate(from,to){
 }
 
 /* ================= 新建旅行 ================= */
-let _nt={theme:'sea'};
+let _nt={theme:'mountain'};
 function openNewTrip(){
-  _nt={theme:'sea'};
+  _nt={theme:'mountain'};
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>开始新旅行 ✈️</b><button class="go" data-act="createTrip">创建</button></div>
   <div class="sheet-body">
    <label class="fld"><span>去哪儿玩？</span><input id="nt-name" placeholder="例如：大阪京都 6 日游"></label>
@@ -693,7 +694,7 @@ function openNewTrip(){
    <label class="fld"><span>一起去的朋友（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
    <p class="mut small">之后也可以在「设置」里增删成员、换主题。</p></div>`);
 }
-const THEME_EMOJI={sea:'🏝️',sunset:'🌅',sakura:'🌸',snow:'🏔️',forest:'🏕️',city:'🏙️',desert:'🐫',lagoon:'🐠'};
+const THEME_EMOJI={mountain:'⛰️',lake:'🛶',maple:'🍂',night:'🌙',sea:'🏖️',tea:'🍵',sand:'🐫',stone:'🧳'};
 function createTrip(){
   const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value;
   const meName=$('#nt-me').value.trim()||'我';
@@ -988,7 +989,7 @@ const ACT={
   tab(el){if(view.tab===el.dataset.t)return;view.tab=el.dataset.t;animNext=true;render();scrollTo({top:0,behavior:'smooth'});buzz(5)},
   bell(){view.tab='feed';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
   setTheme(el){const t=trip();t.theme=el.dataset.k;t.metaAt=now();save();render();buzz(8)},
-  ntTheme(el){_nt.theme=el.dataset.k;document.querySelectorAll('#nt-themes .th').forEach(b=>b.classList.toggle('on',b===el));const th=THEMES[_nt.theme],rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1])},
+  ntTheme(el){_nt.theme=el.dataset.k;document.querySelectorAll('#nt-themes .th').forEach(b=>b.classList.toggle('on',b===el));const th=THEMES[_nt.theme]||THEMES.mountain,rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1])},
   testNotify(){const t=trip(),o=activeM(t).find(m=>m.id!==S.me[t.id])||activeM(t)[0];notify(`🔔 ${o?o.name:'朋友'} 记了一笔：拉面 ${fmt(toMinor(980,'JPY'),'JPY')}`);if(!S.prefs.toast)toast('（弹出提醒已关闭）')},
   fcat(el){view.cat=el.dataset.c;animNext=true;render()},
   setMe(el){S.me[S.cur]=el.dataset.id;persist();render()},
