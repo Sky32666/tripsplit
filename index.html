@@ -348,7 +348,7 @@ async function joinTrip(id){
   S.cur=id;S.seen[id]=now();view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('🎉 已加入「'+trip().name+'」，先选一下你是谁');pushSyncMe();
 }
 /* ---------- 锁屏推送（和慢慢来同一套：Web Push + Supabase 函数） ---------- */
-const fnUrl=()=>CFG.supabaseUrl+'/functions/v1/ts-notify';
+const fnUrl=()=>CFG.supabaseUrl+'/functions/v1/hyper-function';
 const fnHeaders=()=>({'Content-Type':'application/json',apikey:CFG.supabaseKey});
 function pushTo(t,to,title,text,url,tag){
   if(!sb||!t||!t.cloud||!CFG.vapidPublicKey)return;
