@@ -677,9 +677,11 @@ function balView(t){
   const xbtn=x=>{if(pend.some(e=>e.from===x.from&&e.to===x.to))return `<span class="mut small" style="flex:none">⏳ 待确认</span>`;
     return x.from===me?`<button class="btn sm primary" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">我已还</button>`:x.to===me?`<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已收到</button>`:''};
   const pendCard=pend.length?`<div class="card" style="border:1.5px solid var(--pri)"><h3>⏳ 等待确认的还款</h3>${pend.map(e=>`<div class="xfer">${av(t,e.from)}<div class="n"><b>${esc(mname(t,e.from))}</b> 说已还给 <b>${esc(mname(t,e.to))}</b>${forTxt(t,e)?` <span class="mut small">（${esc(forTxt(t,e))}）</span>`:''}<br><b>${fmt(e.amount,e.currency)}</b> <span class="mut small">${relTime(e.updatedAt||0)}</span></div>${e.to===me?`<div style="display:flex;flex-direction:column;gap:6px;flex:none"><button class="btn sm primary" data-act="payConfirm" data-id="${e.id}">✓ 确认收到</button><button class="btn sm" data-act="payReject" data-id="${e.id}">没收到</button></div>`:e.from===me?`<button class="btn sm" data-act="edit" data-id="${e.id}">等 TA 确认…</button>`:'<span class="mut small" style="flex:none">等待确认</span>'}</div>`).join('')}</div>`:'';
-  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}${xbtn(x)}</div>`).join('');
+  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b>${altAmt(t,x.amt,payCurOf(t,x.to))}</div>${av(t,x.to)}${xbtn(x)}</div>`).join('');
   const done=`<div class="empty" style="padding:16px"><div class="e">🎉</div><div>大家都结清了，继续玩吧！</div></div>`;
   const tail=xs=>`${xs.length?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}<button class="btn ghost block" data-act="settle">＋ 记录一笔还款</button><p class="mut small" style="margin:4px 2px 0">💡 欠钱的人点「我已还」后，要等收钱的人点「确认收到」才算还清。</p>`;
+  activeM(t).forEach(m=>{const c=payCurOf(t,m.id);if(c!==t.base)wantRate(t,c)});
+  const prefCard=me?`<div class="card"><div class="switch"><div><b>💱 别人还我钱时，我想收</b><div class="mut small">还款时会自动按 Wise 汇率换成这个币种</div></div><select data-paycur="1" style="width:auto;flex:none">${[...new Set([...tripCurs(t),payCurOf(t,me)])].map(c=>`<option value="${c}" ${c===payCurOf(t,me)?'selected':''}>${c}${CURNAME[c]?' '+CURNAME[c]:''}</option>`).join('')}</select></div></div>`:'';
   let how;
   if(simp){const xs=simplify(b);how=`<div class="card"><h3>💸 怎么还钱 <span class="mut small" style="font-weight:500">· 已合并成最少转账</span></h3>${xrows(xs)||done}${tail(xs)}</div>`}
   else{
@@ -694,7 +696,7 @@ function balView(t){
   }
   return `${pendCard}<div class="card"><h3>👥 每个人的结余 <span class="mut small" style="font-weight:500">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
   <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">${simp?'开：合并转账，让还款次数最少':'关：按每一笔账单分别显示谁欠谁'}</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
-  ${how}`;
+  ${how}${prefCard}`;
 }
 function statsView(t){
   const ex=live(t).filter(e=>e.type!=='payment');
@@ -1091,6 +1093,23 @@ function openView(e){
 /* ================= 还款：欠钱的人说「我已还」→ 收钱的人「确认收到」才算 ================= */
 let stS=null;
 const suggestAmt=(t,from,to)=>((t.simplify!==false?simplify(balances(t)):pairwise(t)).find(x=>x.from===from&&x.to===to)||{}).amt||0;
+/* ---------- 还款币种：收钱的人可以选「我想收台币 / 马币」 ---------- */
+const tripCurs=t=>[...new Set([t.base,...live(t).map(e=>e.currency),...Object.keys(t.rates||{}),...CUR].filter(Boolean))];
+const payCurOf=(t,id)=>{const c=mem(t,id)?.payCur;return c&&c!==t.base?c:t.base};
+const knownRate=(t,c)=>c===t.base?1:(_rateCache[c+t.base]?.rate||t.rates?.[c]||0); // 1 c = ? base
+const WHOLE=new Set(['TWD','IDR','VND','HUF']); // 现金没有小数的币种，还款金额取整
+const inCur=(t,b,c,r)=>{if(c===t.base)return b;const u=WHOLE.has(c)?10**digits(c):1;return Math.round(fromMinor(b,t.base)/(r||knownRate(t,c))*10**digits(c)/u)*u};
+const altAmt=(t,b,c)=>c!==t.base&&knownRate(t,c)?` <span class="mut small" style="font-weight:500">≈ ${fmt(inCur(t,b,c),c)}</span>`:'';
+let _rateWant=new Set();
+function wantRate(t,c){if(c===t.base||_rateCache[c+t.base]||_rateWant.has(c))return;_rateWant.add(c);fetchRate(c,t.base).then(r=>{_rateWant.delete(c);if(r&&S.cur===t.id&&view.tab==='bal'&&!$('#sheet-root.open'))render()})}
+function setPayCur(c){const t=trip(),m=mem(t,S.me[t.id]);if(!m)return;if(c===t.base)delete m.payCur;else m.payCur=c;m.updatedAt=now();save();render();toast(c===t.base?`别人还你钱会用 ${t.base}`:`✓ 别人还你钱会默认用 ${c}`)}
+// 还款单：金额以本位币记在 stS.amt，显示时换成选的币种
+function stSetCur(c){const t=trip();stS.cur=c;stS.rate=knownRate(t,c);stS.rsrc='';stS.typed=false;renderSettle();
+  if(c!==t.base){stS.rsrc='⏳ 正在获取 Wise 汇率…';updStSrc();fetchRate(c,t.base).then(r=>{if(!stS||stS.cur!==c)return;if(r){stS.rate=r.rate;stS.rsrc=rateLabel(r)}else stS.rsrc=stS.rate?'没网，先用上次的汇率':'取不到汇率，请手动填金额';if(!stS.typed)renderSettle();else updStSrc()})}}
+const stDisp=t=>stS.amt&&(stS.cur===t.base||stS.rate)?plain(inCur(t,stS.amt,stS.cur,stS.rate),stS.cur):'';
+function updStSrc(){const el=$('#st-rsrc');if(!el)return;const t=trip(),c=stS.cur;
+  if(c===t.base){el.textContent='';return}const a=toMinor($('#st-amt')?.value||'',c);
+  el.innerHTML=`${stS.rate?`1 ${c} = ${+(+stS.rate).toPrecision(6)} ${t.base}`:''}${a>0&&stS.rate?` · ≈ <b>${fmt(!stS.typed&&stS.amt&&a===inCur(t,stS.amt,c,stS.rate)?stS.amt:Math.round(fromMinor(a,c)*stS.rate*10**digits(t.base)),t.base)}</b>`:''}<br>${esc(stS.rsrc||'')}`}
 function openSettle({id,from,to,amt,bill}={}){
   const t=trip(),me=S.me[t.id];
   if(!me){toast('👋 先在上面选一下你是谁');return}
@@ -1099,8 +1118,8 @@ function openSettle({id,from,to,amt,bill}={}){
   const mode=to===me?'recv':'pay';
   const others=activeM(t).filter(m=>m.id!==me).map(m=>m.id);
   let other=mode==='pay'?(to||others.find(o=>suggestAmt(t,me,o))||others[0]):(from||others.find(o=>suggestAmt(t,o,me))||others[0]);
-  stS={mode,other,amt:+amt||(mode==='pay'?suggestAmt(t,me,other):suggestAmt(t,other,me)),bills:new Set(bill?[bill]:[])};
-  renderSettle();
+  stS={mode,other,amt:+amt||(mode==='pay'?suggestAmt(t,me,other):suggestAmt(t,other,me)),bills:new Set(bill?[bill]:[]),cur:t.base,rate:1};
+  const pc=payCurOf(t,mode==='pay'?other:me);if(pc!==t.base){openSheet('');stSetCur(pc)}else renderSettle();
 }
 function renderSettle(){
   const t=trip(),me=S.me[t.id],m=stS.mode;
@@ -1110,10 +1129,12 @@ function renderSettle(){
    <div class="seg" style="margin-top:0"><button class="${m==='pay'?'on':''}" data-act="stMode" data-m="pay">💸 我还钱给别人</button><button class="${m==='recv'?'on':''}" data-act="stMode" data-m="recv">💰 别人还我钱</button></div>
    <label class="fld"><span>${m==='pay'?'还给谁':'谁还给我'}</span><select id="st-other">${opts}</select></label>
    ${pickBillsHTML(t)}
-   <div class="amtrow"><select disabled><option>${t.base}</option></select><input class="bigamt" id="st-amt" inputmode="decimal" placeholder="0" value="${stS.amt?plain(stS.amt,t.base):''}"></div>
+   <div class="amtrow"><select id="st-cur">${[...new Set([...tripCurs(t),payCurOf(t,m==='pay'?stS.other:me)])].map(c=>`<option value="${c}" ${c===stS.cur?'selected':''}>${c}</option>`).join('')}</select><input class="bigamt" id="st-amt" inputmode="decimal" placeholder="0" value="${stDisp(t)}"></div>
+   ${stS.cur!==t.base?`<div id="st-rsrc" class="mut small" style="margin:-4px 4px 8px"></div>`:''}
+   ${payCurOf(t,m==='pay'?stS.other:me)!==t.base?`<div class="mut small" style="margin:-2px 4px 8px">💱 ${esc(mname(t,m==='pay'?stS.other:me))} 想收 ${payCurOf(t,m==='pay'?stS.other:me)}</div>`:''}
    <label class="fld"><span>日期</span><input type="date" id="st-date" value="${today()}"></label>
    <div class="banner small">${m==='pay'?'⏳ 保存后会通知对方，<b>等 TA 点「确认收到」才算还清</b>。实际转账请用微信 / 支付宝 / PayID 完成。':'✓ 你自己确认收到钱，马上算还清，并通知对方。'}</div></div>`;
-  if($('#sheet'))$('#sheet').innerHTML=html;else openSheet(html);
+  if($('#sheet'))$('#sheet').innerHTML=html;else openSheet(html);updStSrc();
 }
 function settleLines(t){const me=S.me[t.id],from=stS.mode==='pay'?me:stS.other,to=stS.mode==='pay'?stS.other:me,BL=billLines(t);
   return Object.values(BL).flat().filter(l=>l.from===from&&l.to===to&&l.rest>0)}
@@ -1124,21 +1145,24 @@ function pickBillsHTML(t){
     return `<label class="mrow" style="cursor:pointer"><input type="checkbox" data-stbill="${l.bill}" ${stS.bills.has(l.bill)?'checked':''} style="width:20px;height:20px;flex:none"><span class="n">${cat(e.category)[1]} ${esc(e.title)} <span class="mut small">${e.date.slice(5)}</span></span><b>${fmt(l.rest,t.base)}</b></label>`}).join('')}</div>`;
 }
 function stSave(){
-  const t=trip(),me=S.me[t.id],other=$('#st-other').value,amount=toMinor($('#st-amt').value,t.base);
+  const t=trip(),me=S.me[t.id],other=$('#st-other').value,cur=stS.cur||t.base,amount=toMinor($('#st-amt').value,cur);
+  if(cur!==t.base&&!(stS.rate>0))return toast('还没拿到汇率，等一下或检查网络');
+  // 没改过建议金额 → 汇率按欠款反推，换算回本位币刚好等于欠的钱，不留零头
+  const rate=cur===t.base?1:(!stS.typed&&stS.amt&&amount===inCur(t,stS.amt,cur,stS.rate)?fromMinor(stS.amt,t.base)/fromMinor(amount,cur):+stS.rate);
   if(!other)return toast('选一下对方');
   if(!(amount>0))return toast('请输入金额');
   const pay=stS.mode==='pay',from=pay?me:other,to=pay?other:me;
-  const dup=live(t).find(x=>x.type==='payment'&&x.from===from&&x.to===to&&x.amount===amount&&pstat(x)!=='rejected'&&now()-(x.createdAt||0)<30*60000);
-  if(dup&&!confirm(`${relTime(dup.createdAt)}已经记过一笔一样的还款（${mname(t,from)} → ${mname(t,to)} ${fmt(amount,t.base)}）。\n确定还要再记一笔吗？`))return;
+  const dup=live(t).find(x=>x.type==='payment'&&x.from===from&&x.to===to&&x.amount===amount&&x.currency===cur&&pstat(x)!=='rejected'&&now()-(x.createdAt||0)<30*60000);
+  if(dup&&!confirm(`${relTime(dup.createdAt)}已经记过一笔一样的还款（${mname(t,from)} → ${mname(t,to)} ${fmt(amount,cur)}）。\n确定还要再记一笔吗？`))return;
   if(stS.saving)return;stS.saving=true;
   const before=Object.values(balances(t)).some(v=>v);
-  const e={id:uid(),createdAt:now(),type:'payment',from,to,amount,bills:[...(stS.bills||[])],currency:t.base,rate:1,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:me,createdBy:me,status:pay?'pending':'confirmed'};
+  const e={id:uid(),createdAt:now(),type:'payment',from,to,amount,bills:[...(stS.bills||[])],currency:cur,rate,title:'还款',category:'settle',date:$('#st-date').value||today(),updatedAt:now(),by:me,createdBy:me,status:pay?'pending':'confirmed'};
   if(!pay)e.confirmedAt=now();
   t.expenses.push(e);flashIds.add(e.id);buzz();
   save();closeSheet();render();
   if(!e.bills.length)delete e.bills;const ft=forTxt(t,e)?`（${forTxt(t,e)}）`:'';
-  if(pay){toast(`⏳ 已通知 ${mname(t,to)}，等 TA 确认收到`);pushTo(t,[to],`💸 ${mname(t,me)} 还你钱啦`,`${mname(t,me)} 说已还你 ${fmt(amount,t.base)}${ft}，点开确认一下有没有收到`,`?trip=${t.id}&tab=bal`,e.id)}
-  else{celebrate(t,before,'已确认收到 ✓');pushTo(t,[from],'✅ 还款已确认',`${mname(t,me)} 确认收到了你的 ${fmt(amount,t.base)}${ft}`,`?trip=${t.id}&tab=bal`,e.id)}
+  if(pay){toast(`⏳ 已通知 ${mname(t,to)}，等 TA 确认收到`);pushTo(t,[to],`💸 ${mname(t,me)} 还你钱啦`,`${mname(t,me)} 说已还你 ${fmt(amount,cur)}${ft}，点开确认一下有没有收到`,`?trip=${t.id}&tab=bal`,e.id)}
+  else{celebrate(t,before,'已确认收到 ✓');pushTo(t,[from],'✅ 还款已确认',`${mname(t,me)} 确认收到了你的 ${fmt(amount,cur)}${ft}`,`?trip=${t.id}&tab=bal`,e.id)}
 }
 function celebrate(t,before,msg){if(before&&!Object.values(balances(t)).some(v=>v)){confetti();buzz([20,60,20]);toast('🎉 全部结清！')}else toast(msg)}
 function openPayment(e){
@@ -1352,7 +1376,7 @@ const ACT={
   avColor(el){setMyAvatar({color:el.dataset.c})},
   avReset(){setMyAvatar({avatar:null})},
   goBal(){view.tab='bal';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
-  stMode(el){stS.mode=el.dataset.m;const t=trip(),me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,stS.other):suggestAmt(t,stS.other,me);renderSettle()},
+  stMode(el){stS.mode=el.dataset.m;const t=trip(),me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,stS.other):suggestAmt(t,stS.other,me);const pc=payCurOf(t,stS.mode==='pay'?stS.other:me);if(pc!==stS.cur)stSetCur(pc);else renderSettle()},
   payConfirm(el){{const t=trip(),p=t.expenses.find(x=>x.id===el.dataset.id);const dup=p&&live(t).find(x=>x!==p&&x.type==='payment'&&x.from===p.from&&x.to===p.to&&x.amount===p.amount&&pstat(x)==='confirmed'&&Math.abs((x.createdAt||0)-(p.createdAt||0))<30*60000);
     if(dup&&!confirm(`⚠️ 你${relTime(dup.confirmedAt||dup.createdAt)}已经确认过一笔一样的 ${fmt(p.amount,p.currency)}，这笔可能是重复的。\n真的收到了两次吗？`))return}const r=setPay(el.dataset.id,'confirmed');if(!r)return;const{t,e,before}=r;celebrate(t,before,'✓ 已确认收到');pushTo(t,[e.from],'✅ 还款已确认',`${mname(t,e.to)} 确认收到了你的 ${fmt(e.amount,e.currency)}`,`?trip=${t.id}&tab=bal`,e.id)},
   payReject(el){if(!confirm('确定没收到这笔钱？会通知对方。'))return;const r=setPay(el.dataset.id,'rejected');if(!r)return;const{t,e}=r;toast('已告诉对方没收到');pushTo(t,[e.from],'✗ 对方说没收到',`${mname(t,e.to)} 说没收到你的 ${fmt(e.amount,e.currency)}，确认一下转账`,`?trip=${t.id}&tab=bal`,e.id)},
@@ -1433,6 +1457,7 @@ document.addEventListener('touchend',async()=>{
     const e2=$('#ptr');if(e2){e2.style.opacity=0;e2.style.transform=''}}
 });
 document.addEventListener('input',ev=>{const el=ev.target;
+  if(el.id==='st-amt'&&stS){stS.typed=true;updStSrc()}
   if(ed&&el.dataset.f&&el.tagName!=='SELECT'){setPath(ed,el.dataset.f,el.value);if(el.dataset.f==='rate'){ed.rateSrc='✏️ 手动填写的汇率';updRateSrc()}edPreview()}
   if(el.id==='search'){view.q=el.value;$('#explist').innerHTML=listItems(trip())}
 });
@@ -1446,8 +1471,10 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   if(el.dataset.paybill){const p=t.expenses.find(x=>x.id===el.dataset.pid);if(p){const cur=new Set(payBills(t,p));el.checked?cur.add(el.dataset.paybill):cur.delete(el.dataset.paybill);
     p.bills=[...cur];if(!p.bills.length)delete p.bills;p.updatedAt=now();save();render();openPayment(p);toast(p.bills?'✓ 已标记：'+forTxt(t,p):'已取消标记')}}
   if(el.dataset.stbill&&stS){el.checked?stS.bills.add(el.dataset.stbill):stS.bills.delete(el.dataset.stbill);
-    const sum=settleLines(t).filter(l=>stS.bills.has(l.bill)).reduce((a,l)=>a+l.rest,0);if(sum){stS.amt=sum;const a=$('#st-amt');if(a)a.value=plain(sum,t.base)}}
-  if(el.id==='st-other'&&stS){stS.bills=new Set();stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);stS.amt=stS.amt;renderSettle()}
+    const sum=settleLines(t).filter(l=>stS.bills.has(l.bill)).reduce((a,l)=>a+l.rest,0);if(sum){stS.amt=sum;stS.typed=false;const a=$('#st-amt');if(a)a.value=stDisp(t);updStSrc()}}
+  if(el.id==='st-other'&&stS){stS.bills=new Set();stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);const pc=payCurOf(t,stS.mode==='pay'?el.value:me);if(pc!==stS.cur)stSetCur(pc);else renderSettle()}
+  if(el.id==='st-cur'&&stS)stSetCur(el.value);
+  if(el.dataset.paycur)setPayCur(el.value);
   if(el.id==='av-file'&&el.files[0]){const f=el.files[0];el.value='';avatarFromFile(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
