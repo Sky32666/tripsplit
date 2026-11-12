@@ -12,161 +12,207 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>旅账 · 旅行 AA 记账</title>
 <style>
-:root{--bg:#f4f5f2;--card:#fff;--ink:#16201d;--mut:#6b7570;--line:#e3e6e1;--pri:#0f766e;--pri2:#14b8a6;--pos:#15803d;--neg:#c2410c;--chip:#eef1ec;--r:16px;--sh:0 1px 2px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.05)}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1210;--card:#161d1a;--ink:#e8eeeb;--mut:#93a29c;--line:#26302c;--chip:#1f2925;--pos:#4ade80;--neg:#fb923c;--sh:none}}
+:root{--bg:#f6f1e9;--card:#fffdf9;--ink:#1f2a2e;--mut:#7d8783;--line:#ece4d7;--pri:#0891b2;--pri2:#38bdf8;--pos:#16a34a;--neg:#e2552b;--chip:#f2ece2;--r:20px;--sh:0 1px 2px rgba(80,55,20,.04),0 6px 22px rgba(80,55,20,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#10151c;--card:#18212b;--ink:#e9eef2;--mut:#93a1ad;--line:#26313d;--chip:#212c38;--pos:#4ade80;--neg:#fb923c;--sh:none}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink)}
+body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","HarmonyOS Sans SC","MiSans","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
+  background-image:radial-gradient(circle at 0% -5%,color-mix(in srgb,var(--pri2) 20%,transparent) 0,transparent 42%),radial-gradient(circle at 105% 18%,color-mix(in srgb,var(--pri) 12%,transparent) 0,transparent 38%);background-attachment:fixed}
 input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{font-size:16px}
 button{cursor:pointer}
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
-.top .ttl{flex:1;font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-.brand{flex:1;font-weight:800;font-size:22px;letter-spacing:.5px}
-.icon{border:0;background:var(--card);box-shadow:var(--sh);width:38px;height:38px;border-radius:12px;font-size:20px;display:grid;place-items:center}
-.wrap{max-width:560px;margin:0 auto;padding:4px 14px 130px}
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px;margin:12px 0}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4)}
+.top .ttl{flex:1;min-width:0;font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.brand{flex:1;font-weight:900;font-size:28px;letter-spacing:1px;line-height:1.1}
+.brand small{display:block;font-size:12.5px;font-weight:500;color:var(--mut);letter-spacing:0;margin-top:2px}
+.icon{position:relative;border:0;background:var(--card);box-shadow:var(--sh);width:40px;height:40px;border-radius:14px;font-size:18px;display:grid;place-items:center;flex:none}
+.badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#ef4444;color:#fff;font-size:11px;line-height:19px;font-weight:700;border:2px solid var(--bg);animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+.wrap{max-width:560px;margin:0 auto;padding:4px 14px calc(env(safe-area-inset-bottom) + 112px)}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin:12px 0}
 .mut{color:var(--mut)}.small{font-size:12.5px}.pos{color:var(--pos)}.neg{color:var(--neg)}
-.btn{border:0;border-radius:12px;padding:11px 16px;background:var(--chip);font-weight:600}
-.btn.primary{background:var(--pri);color:#fff}
-.btn.ghost{background:transparent;border:1.5px dashed var(--line);color:var(--mut)}
+.btn{border:0;border-radius:14px;padding:12px 16px;background:var(--chip);font-weight:700}
+.btn.primary{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 6px 18px color-mix(in srgb,var(--pri) 28%,transparent)}
+.btn.ghost{background:transparent;border:1.5px dashed color-mix(in srgb,var(--mut) 45%,transparent);color:var(--mut)}
 .btn.danger{background:transparent;color:#dc2626;border:1.5px solid color-mix(in srgb,#dc2626 35%,transparent)}
-.btn.block{display:block;width:100%;margin:10px 0}
-.btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}
-.hero{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:22px;padding:18px;margin:8px 0 12px;box-shadow:0 8px 24px color-mix(in srgb,var(--pri) 35%,transparent)}
-.hero .lbl{opacity:.85;font-size:13px}.hero .big{font-size:32px;font-weight:800;letter-spacing:-.5px}
-.hero .me{margin-top:8px;background:rgba(255,255,255,.16);border-radius:12px;padding:8px 12px;font-size:14px;display:flex;justify-content:space-between}
-.tabs{display:flex;background:var(--chip);border-radius:14px;padding:4px;gap:4px;position:sticky;top:calc(env(safe-area-inset-top) + 58px);z-index:4}
-.tabs button{flex:1;border:0;background:transparent;padding:8px 0;border-radius:10px;font-weight:600;color:var(--mut)}
-.tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
-.tripc{display:flex;align-items:center;gap:12px;cursor:pointer}
-.tripc .em{font-size:28px;width:48px;height:48px;border-radius:14px;background:var(--chip);display:grid;place-items:center}
-.tripc .mid{flex:1;min-width:0}.tripc b{display:block;font-size:16px}
-.search{display:flex;gap:8px;margin:12px 0 6px}
-.search input{flex:1;border:0;background:var(--card);box-shadow:var(--sh);border-radius:12px;padding:10px 12px}
+.btn.block{display:block;width:100%;margin:10px 0;text-align:center}
+.btn.big{padding:15px;font-size:16px}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:11px}
+/* hero = 明信片 */
+.hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:26px;padding:14px 18px 34px;margin:6px 0 8px;box-shadow:0 14px 32px color-mix(in srgb,var(--pri) 30%,transparent)}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.12)}
+.hero .lbl{opacity:.9;font-size:13px;margin-top:12px;position:relative;z-index:1}
+.hero .big{font-size:34px;font-weight:900;letter-spacing:-.5px;font-variant-numeric:tabular-nums;position:relative;z-index:1;line-height:1.2}
+.hero-row{display:flex;align-items:center;justify-content:space-between;gap:8px;position:relative;z-index:1;margin-top:4px}
+.stamp{border:1.5px dashed rgba(255,255,255,.75);border-radius:8px;padding:2px 9px;font-size:12.5px;font-weight:800;transform:rotate(-3deg);white-space:nowrap}
+.greet{font-size:12.5px;opacity:.92;text-align:right}
+.hero .me{position:relative;z-index:1;margin-top:10px;background:rgba(255,255,255,.2);border-radius:14px;padding:9px 12px;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.hero-emoji{position:absolute;right:14px;top:40px;font-size:56px;z-index:0;opacity:.95;animation:floaty 4.5s ease-in-out infinite;filter:drop-shadow(0 8px 10px rgba(0,0,0,.18))}
+@keyframes floaty{50%{transform:translateY(-8px) rotate(5deg)}}
+.wave{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:20px;z-index:1}
+.avs{display:inline-flex;align-items:center}.avs .av{border:2px solid rgba(255,255,255,.85);margin-left:-8px;width:27px;height:27px}.avs .av:first-child{margin-left:0}
+/* 首页明信片 */
+.hello-card{font-size:15px;color:var(--mut);margin:2px 2px 4px}
+.postcard{background:var(--card);border-radius:22px;box-shadow:var(--sh);margin:14px 0;overflow:hidden;cursor:pointer;transition:transform .15s}
+.postcard:active{transform:scale(.98)}
+.pc-top{height:82px;background:linear-gradient(135deg,var(--a),var(--b));display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;position:relative;overflow:hidden}
+.pc-top::after{content:"";position:absolute;right:-30px;bottom:-50px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.15)}
+.pc-emoji{font-size:44px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.2))}
+.pc-stamp{border:1.5px dashed rgba(255,255,255,.85);color:#fff;border-radius:8px;padding:2px 9px;font-size:12px;font-weight:800;transform:rotate(3deg)}
+.pc-body{padding:12px 16px 14px}
+.pc-name{font-size:18px;font-weight:800}
+.pc-meta{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:13px;margin-top:6px;flex-wrap:wrap}
+.pc-meta .avs .av{border-color:var(--card);width:24px;height:24px;font-size:11px}
+.pc-bal{margin-top:8px;font-weight:800;font-size:14px}
+/* 底部导航 */
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:flex-end;justify-content:space-around;max-width:560px;margin:0 auto;padding:6px 6px calc(env(safe-area-inset-bottom) + 6px);background:color-mix(in srgb,var(--card) 90%,transparent);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line);border-radius:22px 22px 0 0;box-shadow:0 -8px 26px rgba(60,40,10,.07)}
+.bnav button{flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0 2px;color:var(--mut);font-size:11.5px;font-weight:700}
+.bnav i{font-style:normal;font-size:21px;line-height:1.2;filter:grayscale(.85);opacity:.65;transition:transform .25s cubic-bezier(.2,1.4,.4,1),filter .2s,opacity .2s}
+.bnav .on{color:var(--pri)}.bnav .on i{filter:none;opacity:1;transform:translateY(-3px) scale(1.15)}
+.bnav .plus{flex:none;width:58px;height:58px;margin:-28px 4px 4px;border-radius:20px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font-size:30px;font-weight:400;box-shadow:0 10px 24px color-mix(in srgb,var(--pri) 45%,transparent);justify-content:center;animation:pop .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+/* 列表 */
+.search{display:flex;gap:8px;margin:8px 0 4px}
+.search input{flex:1;min-width:0;border:0;background:var(--card);box-shadow:var(--sh);border-radius:14px;padding:10px 14px;outline:none}
+.scanbtn{flex:none;display:flex;align-items:center;gap:4px;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border-radius:14px;padding:0 14px;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 28%,transparent)}
 .chips{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:4px 0 6px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;border:0;background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13.5px;white-space:nowrap}
-.chip.on{background:var(--pri);color:#fff}
-.dayh{display:flex;justify-content:space-between;margin:16px 4px 6px;font-size:13px;color:var(--mut);font-weight:600}
+.chip{flex:none;border:0;background:var(--card);box-shadow:var(--sh);border-radius:999px;padding:6px 12px;font-size:13.5px;white-space:nowrap}
+.chip.on{background:var(--ink);color:var(--bg)}
+.dayh{display:flex;justify-content:space-between;align-items:baseline;margin:16px 6px 7px;font-size:13px;color:var(--mut);font-weight:600}
+.dayh b{color:var(--ink);font-size:15px;font-weight:900;margin-right:2px}
 .list{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
-.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .sw:last-child>.row{border-bottom:0}
 .sw{position:relative;overflow:hidden}
-.sw-bg{position:absolute;inset:0;padding-right:18px;justify-content:flex-end;background:#dc2626;opacity:0;display:flex;align-items:center;color:#fff;font-weight:700;font-size:14px;transition:transform .15s}
+.sw-bg{position:absolute;inset:0;padding-right:18px;justify-content:flex-end;background:#ef4444;opacity:0;display:flex;align-items:center;color:#fff;font-weight:700;font-size:14px}
 .sw.swiping .sw-bg{opacity:1}.sw.arm .sw-bg{font-size:16px}
 .sw>.row{position:relative;background:var(--card);transition:transform .22s cubic-bezier(.2,.9,.3,1)}
-.anim .sw,.anim .dayh{animation:rowIn .35s cubic-bezier(.2,.9,.3,1) both}
-@keyframes rowIn{from{opacity:0;transform:translateY(10px)}}
-.flash>.row{animation:flash 1.8s ease}
-@keyframes flash{0%,40%{background:color-mix(in srgb,var(--pri2) 28%,var(--card))}}
-button,.chip,.pill,.row,.card.tripc,label.btn{transition:transform .12s,background .2s,opacity .2s}
-button:active,.chip:active,.pill:active,label.btn:active,.card.tripc:active{transform:scale(.96)}
-.row:active{background:var(--chip)}
-#tabbody{animation:fade .25s}
-.fab{animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
-@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}}
-.fab2{position:fixed;right:calc(50% - 150px);bottom:calc(env(safe-area-inset-bottom) + 22px);width:50px;height:50px;border-radius:50%;background:var(--card);box-shadow:0 6px 20px rgba(0,0,0,.18);display:grid;place-items:center;font-size:22px;z-index:6;cursor:pointer;animation:fade .4s .15s both}
-@media (max-width:360px){.fab2{right:14px}}
-.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 60px);transform:translate(-50%,-60px);background:var(--card);box-shadow:var(--sh);border-radius:999px;padding:6px 14px;font-size:13px;z-index:7;opacity:0;transition:opacity .2s}
-.brow{cursor:pointer;border-radius:10px}
-.bbar{height:6px;border-radius:4px;background:var(--chip);position:relative;margin-top:4px}
-.bbar i{position:absolute;top:0;bottom:0;border-radius:4px}
-.legend div{cursor:pointer;padding:3px 4px;border-radius:8px}.legend div:active{background:var(--chip)}
-.feed{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
-.feed:last-child{border-bottom:0}.feed .tx{flex:1;font-size:14px}.feed .tx .mut{font-size:12px}
-.scanbox{background:var(--card);border-radius:14px;padding:10px 12px;margin:10px 0;font-size:14px;border:1.5px solid color-mix(in srgb,var(--pri) 30%,var(--line))}
-.prog{height:6px;border-radius:4px;background:var(--chip);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;width:0;background:var(--pri2);transition:width .3s}
-.scanbar{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap}
-#toast{display:flex;align-items:center;gap:12px}
-#toast button{border:0;background:#fff;color:#111;border-radius:8px;padding:4px 10px;font-weight:700;font-size:13px}
-.sheet{transition:transform .2s}
-.confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
-.row .ico{width:40px;height:40px;border-radius:12px;background:var(--chip);display:grid;place-items:center;font-size:20px;flex:none}
+.row .ico{width:42px;height:42px;border-radius:14px;background:color-mix(in srgb,var(--cc,#64748b) 17%,var(--card));display:grid;place-items:center;font-size:21px;flex:none}
 .row .mid{flex:1;min-width:0}
-.row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .s{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .amt{text-align:right;font-size:13px;flex:none}
-.row .amt b{display:block;font-size:15px}
-.av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:12.5px;font-weight:700;flex:none;vertical-align:middle}
-.av.lg{width:36px;height:36px;font-size:15px}
-.fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 18px);border:0;background:var(--pri);color:#fff;font-weight:700;font-size:16px;padding:15px 30px;border-radius:999px;box-shadow:0 10px 28px color-mix(in srgb,var(--pri) 45%,transparent);z-index:6}
-.empty{text-align:center;color:var(--mut);padding:40px 10px}
-.empty .e{font-size:44px}
-.brow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
-.brow:last-child{border-bottom:0}.brow .n{flex:1;font-weight:600}
-.xfer{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row .amt{text-align:right;font-size:12px;flex:none}
+.row .amt b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+.anim .sw,.anim .dayh{animation:rowIn .38s cubic-bezier(.2,.9,.3,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(12px)}}
+.flash>.row{animation:flash 1.8s ease}
+@keyframes flash{0%,40%{background:color-mix(in srgb,var(--pri2) 30%,var(--card))}}
+button,.chip,.pill,.row,label.btn,.scanbtn{transition:transform .12s,background .2s,opacity .2s}
+button:active,.chip:active,.pill:active,label.btn:active,.scanbtn:active{transform:scale(.95)}
+.sw>.row:active{background:var(--chip)}
+#tabbody{animation:fade .25s}
+.av{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;color:#fff;font-size:12.5px;font-weight:800;flex:none;vertical-align:middle}
+.av.lg{width:38px;height:38px;font-size:15px}
+.empty{text-align:center;color:var(--mut);padding:36px 10px}
+.empty .e{font-size:46px;letter-spacing:6px;animation:floaty 4s ease-in-out infinite;display:inline-block}
+.brow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:10px}
+.brow:last-child{border-bottom:0}.brow .n{flex:1;font-weight:700;min-width:0}
+.bbar{height:6px;border-radius:4px;background:var(--chip);position:relative;margin-top:5px}
+.bbar i{position:absolute;top:0;bottom:0;border-radius:4px}
+.xfer{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
 .xfer:last-child{border-bottom:0}.xfer .n{flex:1;min-width:0;font-size:14px}
+.bill{padding:11px 2px;border-bottom:1px dashed var(--line);cursor:pointer}
+.bill:last-child{border-bottom:0}
+.bh{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:14.5px}
+.bh span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bh .mut{flex:none;font-weight:500}
+.bl{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-top:6px;color:var(--mut)}
+.bl .av{width:22px;height:22px;font-size:10.5px}
+.bl b{margin-left:auto;color:var(--ink);font-variant-numeric:tabular-nums}
+.bl b.pos{color:var(--pos)}.bl b.neg{color:var(--neg)}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.switch input{width:44px;height:26px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;transition:.2s;flex:none}
-.switch input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch input{width:46px;height:28px;appearance:none;-webkit-appearance:none;background:var(--line);border-radius:999px;position:relative;transition:.2s;flex:none;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.25s cubic-bezier(.2,1.4,.4,1);box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .switch input:checked{background:var(--pri)}.switch input:checked::after{left:21px}
-h3{margin:4px 0 10px;font-size:15px}
+h3{margin:2px 0 10px;font-size:15.5px;font-weight:800}
 .stat4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat4 div{background:var(--chip);border-radius:12px;padding:10px 12px}
-.stat4 b{display:block;font-size:18px}
-.legend{display:grid;gap:6px;margin-top:8px}
-.legend div{display:flex;align-items:center;gap:8px;font-size:14px}
-.legend i{width:10px;height:10px;border-radius:3px;flex:none}
-.legend span{flex:1}
+.stat4 div{background:var(--chip);border-radius:14px;padding:10px 12px}
+.stat4 b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.legend{display:grid;gap:4px;margin-top:8px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:4px 6px;border-radius:8px}
+.legend div:active{background:var(--chip)}
+.legend i{width:10px;height:10px;border-radius:3px;flex:none}.legend span{flex:1}
 .bar{height:10px;border-radius:6px;background:var(--chip);overflow:hidden;margin:4px 0 2px}
 .bar i{display:block;height:100%;border-radius:6px}
-.days{display:flex;align-items:flex-end;gap:6px;height:140px;overflow-x:auto;padding-top:14px}
-.days div{flex:1 0 28px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10.5px;color:var(--mut)}
-.days i{display:block;width:70%;background:var(--pri2);border-radius:6px 6px 2px 2px;min-height:2px}
-.banner{background:color-mix(in srgb,var(--pri) 12%,var(--card));border-radius:14px;padding:12px;margin:8px 0}
+.days{display:flex;align-items:flex-end;gap:6px;height:150px;overflow-x:auto;padding-top:14px}
+.days div{flex:1 0 30px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10.5px;color:var(--mut)}
+.days i{display:block;width:70%;background:linear-gradient(var(--pri2),var(--pri));border-radius:8px 8px 3px 3px;min-height:3px}
+.banner{background:color-mix(in srgb,var(--pri) 13%,var(--card));border-radius:16px;padding:12px;margin:8px 0}
 .pills{display:flex;flex-wrap:wrap;gap:6px}
-.pill{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px 5px 5px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
-.pill.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 12%,var(--card))}
-.pill:not(.on){opacity:.55}
+.pill{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:5px 12px 5px 5px;display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.pill.on{border-color:var(--pri);background:color-mix(in srgb,var(--pri) 13%,var(--card))}
+.pill:not(.on){opacity:.5}
 .pills.sm .pill{font-size:12.5px;padding:3px 9px 3px 3px}.pills.sm .av{width:20px;height:20px;font-size:10.5px}
-/* sheet */
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.th{border:2.5px solid transparent;border-radius:14px;padding:9px 2px;color:#fff;font-weight:800;font-size:12px;line-height:1.35;background:linear-gradient(135deg,var(--a),var(--b));text-align:center}
+.th.on{border-color:var(--ink);transform:scale(1.04)}
+/* 弹窗 */
 #sheet-root{position:fixed;inset:0;z-index:20;display:none}
 #sheet-root.open{display:block}
-.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.38);animation:fade .2s}
-.sheet{position:absolute;left:0;right:0;bottom:0;max-width:600px;margin:0 auto;background:var(--bg);border-radius:22px 22px 0 0;max-height:94vh;display:flex;flex-direction:column;animation:up .25s cubic-bezier(.2,.9,.3,1)}
-@keyframes up{from{transform:translateY(60px)}}@keyframes fade{from{opacity:0}}
-.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
-.sheet-head button{border:0;background:none;color:var(--mut);font-size:15px;padding:4px}
-.sheet-head .go{color:var(--pri);font-weight:700}
-.sheet-body{overflow-y:auto;padding:14px 16px calc(env(safe-area-inset-bottom) + 24px);-webkit-overflow-scrolling:touch}
-.fld{display:block;margin:10px 0}
-.fld>span{display:block;font-size:12.5px;color:var(--mut);margin:0 0 4px 2px;font-weight:600}
-.in,.fld input,.fld select,.fld textarea{width:100%;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;outline:none}
+.backdrop{position:absolute;inset:0;background:rgba(15,20,25,.42);animation:fade .2s}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:600px;margin:0 auto;background:var(--bg);border-radius:26px 26px 0 0;max-height:92vh;max-height:calc(100dvh - env(safe-area-inset-top) - 14px);display:flex;flex-direction:column;animation:up .3s cubic-bezier(.2,.9,.3,1);transition:transform .2s}
+.sheet::before{content:"";position:absolute;top:7px;left:50%;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:color-mix(in srgb,var(--mut) 40%,transparent)}
+@keyframes up{from{transform:translateY(70px)}}@keyframes fade{from{opacity:0}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:20px 16px 12px;border-bottom:1px solid var(--line);flex:none}
+.sheet-head b{font-size:16px}
+.sheet-head button{border:0;background:none;color:var(--mut);font-size:15.5px;padding:6px 4px;min-width:44px}
+.sheet-head .go{color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2));border-radius:12px;padding:7px 16px;font-weight:800}
+.sheet-body{flex:1;min-height:0;overflow-y:auto;padding:14px 16px calc(env(safe-area-inset-bottom) + 28px);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.fld{display:block;margin:12px 0;min-width:0}
+.fld>span{display:block;font-size:12.5px;color:var(--mut);margin:0 0 5px 2px;font-weight:700}
+.in,.fld input,.fld select,.fld textarea{display:block;width:100%;min-width:0;min-height:48px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:11px 13px;outline:none;-webkit-appearance:none;appearance:none}
+.fld textarea{min-height:0}
+.fld select,.amtrow select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.fld input[type=date]{line-height:24px}
+.fld input[type=date]::-webkit-date-and-time-value{text-align:left}
 .in:focus,.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--pri)}
 .amtrow{display:flex;gap:8px;align-items:stretch;margin:10px 0}
-.amtrow select{width:96px;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:0 8px;font-weight:700}
-.bigamt{flex:1;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:10px 14px;font-size:28px;font-weight:800;min-width:0;outline:none}
+.amtrow select{flex:none;width:96px;min-height:64px;border:1.5px solid var(--line);background-color:var(--card);border-radius:16px;padding:0 26px 0 12px;font-weight:800;-webkit-appearance:none;appearance:none}
+.bigamt{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--card);border-radius:16px;padding:8px 14px;font-size:30px;font-weight:900;outline:none;font-variant-numeric:tabular-nums}
 .bigamt:focus{border-color:var(--pri)}
-div.bigamt{color:var(--mut)}
-.ratebox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--chip);border-radius:12px;padding:8px 10px;font-size:14px}
-.ratebox input{width:110px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:6px 8px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:2px;margin:14px 0 10px}
-.seg button{flex:1;border:0;background:none;border-radius:9px;padding:7px 0;font-size:13.5px;font-weight:600;color:var(--mut)}
+div.bigamt{color:var(--mut);display:flex;align-items:center;overflow:hidden;white-space:nowrap}
+.ratebox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--chip);border-radius:14px;padding:9px 11px;font-size:14px}
+.ratebox input{width:100px;min-width:0;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:6px 8px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.grid2 .fld{margin:6px 0}
+@media (max-width:380px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.seg{display:flex;background:var(--chip);border-radius:14px;padding:3px;gap:2px;margin:14px 0 10px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:1 0 auto;border:0;background:none;border-radius:11px;padding:8px 10px;font-size:13.5px;font-weight:700;color:var(--mut);white-space:nowrap}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
 .mrow{display:flex;align-items:center;gap:10px;padding:6px 0}
-.mrow .n{flex:1}.mrow input{width:120px;text-align:right;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:7px 10px}
-.item{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:10px;margin:8px 0}
+.mrow .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mrow input{flex:none;width:108px;text-align:right;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:8px 10px}
+.mrow .u{flex:none;width:34px;font-size:12px;color:var(--mut)}
+.item{background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:10px;margin:8px 0}
 .item .r{display:flex;gap:6px;margin-bottom:8px}
-.item .r input{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 9px;min-width:0}
-.item .r input:first-child{flex:1}.item .r input:nth-child(2){width:100px;text-align:right}
-.item .r button{border:0;background:none;color:var(--mut);font-size:18px}
-.preview{background:var(--card);border-radius:14px;padding:10px 12px;margin:12px 0;font-size:14px}
+.item .r input{border:1.5px solid var(--line);background:var(--bg);border-radius:11px;padding:8px 9px;min-width:0}
+.item .r input:first-child{flex:1}.item .r input:nth-child(2){flex:none;width:92px;text-align:right}
+.item .r button{border:0;background:none;color:var(--mut);font-size:18px;flex:none}
+.preview{background:var(--card);border-radius:16px;padding:10px 12px;margin:12px 0;font-size:14px}
 .preview .pr{display:flex;justify-content:space-between;align-items:center;padding:3px 0;gap:8px}
-.preview .pr>span:not(.av){flex:1}
-.err{color:#dc2626;font-weight:600}
-.ok{color:var(--pos);font-weight:600}
+.preview .pr>span:not(.av){flex:1;min-width:0}
+.err{color:#dc2626;font-weight:700}.ok{color:var(--pos);font-weight:700}
 .thumb{width:72px;height:72px;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:zoom-in}
 .viewer{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:40;display:grid;place-items:center;padding:20px}
 .viewer img{max-width:100%;max-height:100%;border-radius:8px}
-#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 16px);transform:translate(-50%,-80px);background:#111;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:50;transition:.25s;max-width:90vw;opacity:0}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translate(-50%,-90px);background:color-mix(in srgb,#111 88%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;padding:11px 16px;border-radius:16px;font-size:14px;z-index:50;width:max-content;transition:transform .35s cubic-bezier(.2,1.3,.4,1),opacity .25s;max-width:92vw;opacity:0;display:flex;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
 #toast.show{transform:translate(-50%,0);opacity:1}
+#toast button{border:0;background:#fff;color:#111;border-radius:9px;padding:4px 10px;font-weight:800;font-size:13px;flex:none}
 textarea.code{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,monospace;word-break:break-all}
 .step{display:flex;gap:10px;margin:8px 0;font-size:14px}.step b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--pri);color:#fff;display:grid;place-items:center;font-size:12px}
 .mem{display:flex;align-items:center;gap:8px;padding:6px 0}
-.mem input{flex:1;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;min-width:0}
-.mem button{border:0;background:none;color:var(--mut);font-size:13px;white-space:nowrap}
-.mem .tag{font-size:11.5px;background:var(--pri);color:#fff;border-radius:6px;padding:1px 6px}
+.mem input{flex:1;border:1.5px solid var(--line);background:var(--bg);border-radius:11px;padding:8px 10px;min-width:0}
+.mem button{border:0;background:none;color:var(--mut);font-size:13px;white-space:nowrap;flex:none}
+.mem .tag{font-size:11.5px;background:var(--pri);color:#fff;border-radius:6px;padding:1px 6px;flex:none}
+.feed{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.feed:last-child{border-bottom:0}.feed .tx{flex:1;font-size:14px;min-width:0}.feed .tx .mut{font-size:12px}
+.feed.new{background:linear-gradient(90deg,color-mix(in srgb,var(--pri2) 14%,transparent),transparent);border-radius:12px;padding-left:6px}
+.scanbox{background:var(--card);border-radius:16px;padding:10px 12px;margin:10px 0;font-size:14px;border:1.5px solid color-mix(in srgb,var(--pri) 30%,var(--line))}
+.prog{height:6px;border-radius:4px;background:var(--chip);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pri),var(--pri2));transition:width .3s}
+.scanbar{display:flex;gap:8px;align-items:center;margin:4px 0 10px;flex-wrap:wrap}
+.ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 62px);transform:translate(-50%,-60px);background:var(--card);box-shadow:var(--sh);border-radius:999px;padding:6px 14px;font-size:13px;z-index:7;opacity:0;transition:opacity .2s}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 </style>
 </head>
 <body>
@@ -191,20 +237,29 @@ const cat=k=>CATS.find(c=>c[0]===k)||CATS[CATS.length-1];
 const CUR=['CNY','USD','EUR','JPY','KRW','HKD','TWD','MOP','SGD','MYR','THB','VND','IDR','PHP','AUD','NZD','GBP','CAD','CHF'];
 const CURNAME={CNY:'人民币',USD:'美元',EUR:'欧元',JPY:'日元',KRW:'韩元',HKD:'港币',TWD:'新台币',MOP:'澳门元',SGD:'新加坡元',MYR:'马币',THB:'泰铢',VND:'越南盾',IDR:'印尼盾',PHP:'菲律宾比索',AUD:'澳元',NZD:'纽币',GBP:'英镑',CAD:'加元',CHF:'瑞郎'};
 const COLORS=['#0f766e','#c2410c','#7c3aed','#2563eb','#db2777','#65a30d','#ca8a04','#0891b2','#dc2626','#4f46e5','#9333ea','#059669'];
-const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸'];
+const EMOJI=['🧳','🏝️','🗻','🏙️','🏕️','🚗','✈️','🍣','🎌','🌸','🏖️','🎡','🗼','⛩️','🐫','🚢'];
+const THEMES={sea:{name:'海岛',icon:'🏝️',c:['#0891b2','#38bdf8']},sunset:{name:'日落',icon:'🌅',c:['#f97316','#ec4899']},sakura:{name:'樱花',icon:'🌸',c:['#db2777','#f9a8d4']},snow:{name:'雪山',icon:'🏔️',c:['#4f46e5','#a78bfa']},
+  forest:{name:'森林',icon:'🌿',c:['#15803d','#84cc16']},city:{name:'城市夜',icon:'🌃',c:['#1e293b','#6366f1']},desert:{name:'沙漠',icon:'🐫',c:['#c2410c','#facc15']},lagoon:{name:'泻湖',icon:'🐠',c:['#0d9488','#a3e635']}};
+const theme=t=>THEMES[t&&t.theme]||THEMES.sea;
+const themesHTML=(cur,act)=>Object.entries(THEMES).map(([k,v])=>`<button class="th ${cur===k?'on':''}" style="--a:${v.c[0]};--b:${v.c[1]}" data-act="${act}" data-k="${k}">${v.icon}<br>${v.name}</button>`).join('');
+function greeting(){const h=new Date().getHours();return h<5?'夜深了 🌙 早点休息':h<11?'早安 ☀️ 今天去哪儿玩？':h<14?'午饭吃点好的 🍜':h<18?'下午茶时间 🧋':h<22?'晚上好 🌆 今天开心吗？':'夜深了 🌙 早点休息'}
+const dayDiff=(a,b)=>Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5);
 
 const _dg={};
 function digits(c){if(!(c in _dg)){try{_dg[c]=new Intl.NumberFormat('en',{style:'currency',currency:c}).resolvedOptions().maximumFractionDigits}catch{_dg[c]=2}}return _dg[c]}
 const fromMinor=(m,c)=>m/10**digits(c);
 const half=s=>String(s??'').replace(/[\uFF01-\uFF5E]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/\u3000/g,' ');
 const num=s=>{let x=half(s).trim().replace(/[\s，]/g,'');if(/^-?\d+,\d{1,2}$/.test(x))x=x.replace(',','.');else x=x.replace(/,/g,'');const v=parseFloat(x);return isFinite(v)?v:0};
-const buzz=(n=10)=>{try{navigator.vibrate&&navigator.vibrate(n)}catch{}};
+const buzz=(n=10)=>{if(typeof S!=='undefined'&&S.prefs&&!S.prefs.vibrate)return;try{navigator.vibrate&&navigator.vibrate(n)}catch{}};
+function chime(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const a=chime.ctx||(chime.ctx=new C());if(a.state==='suspended')a.resume();const t0=a.currentTime;
+  [[880,0],[1318.5,.11]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t0+d);g.gain.exponentialRampToValueAtTime(.14,t0+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.45);o.connect(g).connect(a.destination);o.start(t0+d);o.stop(t0+d+.5)})}catch{}}
+function notify(msg){if(S.prefs.toast)toast(msg);if(S.prefs.sound)chime();buzz(15)}
 const toMinor=(s,c)=>Math.round(num(s)*10**digits(c));
 function fmt(m,c){try{return new Intl.NumberFormat('zh-CN',{style:'currency',currency:c}).format(fromMinor(m,c))}catch{return c+' '+fromMinor(m,c).toFixed(2)}}
 const plain=(m,c)=>String(+fromMinor(m,c).toFixed(digits(c)));
 
 /* ================= 存储 ================= */
-let S=load();
+let S=load();S.seen=S.seen||{};S.prefs=Object.assign({toast:true,sound:true,vibrate:true},S.prefs||{});
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.trips)return Object.assign({order:[],me:{},cur:null,synced:{}},s)}catch{}return{trips:{},order:[],me:{},cur:null,synced:{}}}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('存储空间满了，试试删除部分收据照片')}}
 function save(){persist();scheduleFlush()}
@@ -215,7 +270,7 @@ const cloudOn=!!(CFG.supabaseUrl&&CFG.supabaseKey&&window.supabase&&!/YOUR_/.tes
 let sb=null;try{if(cloudOn)sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey)}catch(e){console.warn(e)}
 let syncState='ok',flushTimer=null,flushing=false,chan=null,chanKey='';
 function rowsOf(t){
-  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
+  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,theme:t.theme,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
   t.members.forEach(m=>rows.push({id:m.id,trip_id:t.id,kind:'member',data:m,updated_at:m.updatedAt||0}));
   t.expenses.forEach(e=>rows.push({id:e.id,trip_id:t.id,kind:'expense',data:e,updated_at:e.updatedAt||0}));
   return rows;
@@ -268,7 +323,7 @@ function subscribe(){
   chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{const r=p.new;if(!r||!r.id)return;const t=S.trips[r.trip_id];
     if(t&&r.kind==='expense'&&r.updated_at>(S.synced[r.id]||0)){const d=r.data,old=t.expenses.find(x=>x.id===r.id),me=S.me[t.id];
       if(d.by&&d.by!==me){const what=d.type==='payment'?`${mname(t,d.from)}→${mname(t,d.to)} 还款`:d.title;
-        toast(`🔔 ${mname(t,d.by)} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${what} ${fmt(d.amount,d.currency)}`);buzz(15)}
+        notify(`🔔 ${mname(t,d.by)} ${d.deleted?'删除了':old?'修改了':'记了一笔'}：${what} ${fmt(d.amount,d.currency)}`)}
       if(!d.deleted)flashIds.add(r.id)}
     applyRow(r);persist();renderSoft()}).subscribe();
 }
@@ -283,7 +338,7 @@ async function joinTrip(id){
   toast('正在加入…');
   try{const ok=await pullTrip(id);if(!ok)return toast('找不到这个旅行，链接可能不完整')}
   catch(e){console.warn(e);return toast('连接云端失败：'+(e.message||'请检查网络'))}
-  S.cur=id;view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('已加入「'+trip().name+'」，先选一下你是谁');
+  S.cur=id;S.seen[id]=now();view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('🎉 已加入「'+trip().name+'」，先选一下你是谁');
 }
 const joinLink=t=>location.origin+location.pathname+'#join='+t.id;
 let view={tab:'list',q:'',cat:''};
@@ -351,45 +406,67 @@ const involves=(e,id)=>id in payersOf(e)||id in sharesOf(e);
 const _heroPrev={},flashIds=new Set();let animNext=true;
 function render(){
   const t=trip();
+  const th=theme(t),rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1]);
+  const mc=$('meta[name=theme-color]');if(mc)mc.content=th.c[0];
   $('#app').innerHTML=t?tripView(t):homeView();
   animNext=false;
   if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
   if(flashIds.size)setTimeout(()=>flashIds.clear(),1900);
   subscribe();
 }
+const avStack=(t,max=5)=>{const ms=activeM(t);return `<span class="avs">${ms.slice(0,max).map(m=>av(t,m.id)).join('')}${ms.length>max?`<span class="av" style="background:#94a3b8">+${ms.length-max}</span>`:''}</span>`};
+const unreadCount=t=>t.expenses.filter(e=>(e.updatedAt||0)>(S.seen[t.id]||0)&&e.by&&e.by!==S.me[t.id]).length;
 function homeView(){
   const ids=S.order.filter(id=>S.trips[id]);
-  const cards=ids.map(id=>{const t=S.trips[id],me=S.me[id];
+  const cards=ids.map(id=>{const t=S.trips[id],me=S.me[id],th=theme(t);
     const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
-    let sub=`${activeM(t).length} 人 · 共 ${fmt(total,t.base)}`,right='';
-    if(me){const b=balances(t)[me]||0;right=b>0?`<div class="pos small">应收<br><b>${fmt(b,t.base)}</b></div>`:b<0?`<div class="neg small">应付<br><b>${fmt(-b,t.base)}</b></div>`:`<div class="mut small">已结清</div>`}
-    return `<div class="card tripc" data-act="open" data-id="${id}"><div class="em">${t.emoji||'🧳'}</div><div class="mid"><b>${esc(t.name)}</b><span class="mut small">${sub}</span></div><div style="text-align:right">${right}</div></div>`}).join('');
-  return `<header class="top"><div class="brand">🧳 旅账</div><button class="icon" data-act="importSheet" title="导入">📥</button></header>
+    let bal='';if(me){const b=balances(t)[me]||0;bal=b>0?`<span class="pos">别人欠你 ${fmt(b,t.base)}</span>`:b<0?`<span class="neg">你欠别人 ${fmt(-b,t.base)}</span>`:`<span class="mut">已结清 ✓</span>`}
+    const un=unreadCount(t);
+    return `<div class="postcard" data-act="open" data-id="${id}" style="--a:${th.c[0]};--b:${th.c[1]}">
+      <div class="pc-top"><span class="pc-emoji">${t.emoji||'🧳'}</span><span class="pc-stamp">${th.icon} ${th.name}${t.cloud?' · ☁️':''}</span></div>
+      <div class="pc-body"><div class="pc-name">${esc(t.name)}${un?` <span class="badge" style="position:static;display:inline-block;border:0">${un}</span>`:''}</div>
+      <div class="pc-meta">${avStack(t)}<span>${activeM(t).length} 人 · 一共 ${fmt(total,t.base)}</span></div>
+      <div class="pc-bal">${bal}</div></div></div>`}).join('');
+  return `<header class="top"><div class="brand">旅账<small>和朋友一起的旅行账本</small></div><button class="icon" data-act="importSheet" title="导入">🔗</button></header>
   <main class="wrap">
-  ${cards||`<div class="empty"><div class="e">🌏</div><p>和朋友出去玩，谁付了钱、谁欠谁，<br>交给旅账算清楚。</p></div>`}
-  <button class="btn primary block" data-act="newTrip">＋ 新建旅行</button>
-  <button class="btn ghost block" data-act="importSheet">📥 收到朋友的同步码？点这里导入</button>
-  <p class="mut small" style="text-align:center;margin-top:24px">数据只保存在本机浏览器 · 用同步码/同步链接和朋友合并账本</p>
+  <div class="hello-card">${greeting()}</div>
+  ${cards||`<div class="empty"><div class="e">🧳✈️🏝️</div><p>和朋友出去玩，谁付了钱、谁欠谁<br>交给旅账算清楚，大家只管开心 🎉</p></div>`}
+  <button class="btn primary block big" data-act="newTrip">＋ 开始一段新旅行</button>
+  <button class="btn ghost block" data-act="importSheet">🔗 收到朋友的邀请链接？点这里</button>
   </main>`;
 }
 function tripView(t){
-  const me=S.me[t.id];
-  const total=live(t).filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
+  const me=S.me[t.id],th=theme(t);
+  if(view.tab==='feed'){S.seen[t.id]=now();persist()}
+  const ex=live(t).filter(e=>e.type!=='payment');
+  const total=ex.reduce((a,e)=>a+baseTotal(e,t),0),n=activeM(t).length||1;
+  const first=ex.map(e=>e.date).sort()[0],dn=first?dayDiff(first,today())+1:0;
+  const dayLbl=!first?'准备出发 ✈️':dn>0?`Day ${dn}`:'即将出发 ✈️';
   let meLine='';
-  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base):b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
-  const who=me?'':`<div class="banner"><b>你是谁？</b><span class="mut small"> 选一下，就能看到“你欠 / 你借出”</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
-  const tabs=[['list','账单'],['bal','结余'],['stats','统计'],['feed','动态'],['set','设置']];
+  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span>${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
+  const who=me?'':`<div class="banner"><b>👋 你是谁？</b><span class="mut small"> 选一下，就能看到「你欠 / 你借出」</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
   const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
-  return `<header class="top"><button class="icon" data-act="home">‹</button><div class="ttl">${t.emoji||''} ${esc(t.name)}</div><button class="icon" data-act="syncOut" title="邀请 / 同步" id="syncdot">${syncIcon(t)}</button></header>
+  const un=unreadCount(t);
+  const nav=[['list','🧾','账单'],['bal','⚖️','结余'],null,['stats','📊','统计'],['set','⚙️','设置']];
+  return `<header class="top"><button class="icon" data-act="home" aria-label="返回">‹</button><div class="ttl">${esc(t.name)}</div>
+  <button class="icon" data-act="bell" aria-label="动态">🔔${un?`<b class="badge">${un>9?'9+':un}</b>`:''}</button>
+  <button class="icon" data-act="syncOut" title="邀请朋友" id="syncdot">${syncIcon(t)}</button></header>
   <main class="wrap">${who}
-  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big" data-v="${total}">${fmt(total,t.base)}</div>${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}</section>
-  <nav class="tabs">${tabs.map(([k,l])=>`<button class="${view.tab===k?'on':''}" data-act="tab" data-t="${k}">${l}</button>`).join('')}</nav>
+  <section class="hero">
+   <div class="hero-row"><span class="stamp">${th.icon} ${dayLbl}</span><span class="greet">${greeting()}</span></div>
+   <div class="lbl">大家一起花了</div>
+   <div class="big" data-v="${total}">${fmt(total,t.base)}</div>
+   <div class="hero-row" style="justify-content:flex-start;gap:10px;margin-top:6px">${avStack(t)}<span class="small" style="opacity:.92">${n} 人 · 人均 ${fmt(Math.round(total/n),t.base)}</span></div>
+   ${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}
+   <div class="hero-emoji">${t.emoji||'🧳'}</div>
+   <svg class="wave" viewBox="0 0 400 20" preserveAspectRatio="none"><path d="M0 12 C 60 2, 120 22, 200 12 S 340 2, 400 12 V20 H0Z" fill="var(--bg)"/></svg>
+  </section>
   <div id="tabbody">${body}</div></main>
-  ${view.tab==='list'||view.tab==='bal'?`<button class="fab" data-act="add">＋ 记一笔</button><label class="fab2" title="拍收据记账">📷<input type="file" accept="image/*" capture="environment" id="quick-scan" hidden></label>`:''}
+  <nav class="bnav">${nav.map(x=>x?`<button class="${view.tab===x[0]?'on':''}" data-act="tab" data-t="${x[0]}"><i>${x[1]}</i><span>${x[2]}</span></button>`:`<button class="plus" data-act="add" aria-label="记一笔">＋</button>`).join('')}</nav>
   <div class="ptr" id="ptr">↓ 下拉刷新</div>`;
 }
 function listView(t){
-  return `<div class="search"><input id="search" type="search" placeholder="🔍 搜索账单、备注、人名" value="${esc(view.q)}"></div>
+  return `<div class="search"><input id="search" type="search" placeholder="🔍 搜账单、备注、人名" value="${esc(view.q)}"><label class="scanbtn">📷 扫收据<input type="file" accept="image/*" capture="environment" id="quick-scan" hidden></label></div>
   <div class="chips"><button class="chip ${!view.cat?'on':''}" data-act="fcat" data-c="">全部</button>${CATS.map(c=>`<button class="chip ${view.cat===c[0]?'on':''}" data-act="fcat" data-c="${c[0]}">${c[1]} ${c[2]}</button>`).join('')}<button class="chip ${view.cat==='settle'?'on':''}" data-act="fcat" data-c="settle">💸 还款</button></div>
   <div id="explist" class="${animNext?'anim':''}">${listItems(t)}</div>`;
 }
@@ -401,19 +478,20 @@ function listItems(t){
     const names=Object.keys({...payersOf(e),...sharesOf(e)}).map(id=>mname(t,id)).join(' ');
     return (e.title+' '+(e.note||'')+' '+cat(e.category)[2]+' '+names).toLowerCase().includes(q);
   });
-  if(!live(t).length)return `<div class="empty"><div class="e">🧾</div><p>还没有账单<br>点「记一笔」，或者点 📷 直接拍收据</p></div>`;
+  if(!live(t).length)return `<div class="empty"><div class="e">🍜🚕🎫</div><p>还没有账单<br>点下面的 ＋ 记一笔，或者 📷 直接拍收据</p></div>`;
   if(!ex.length)return `<div class="empty"><div class="e">🔍</div><p>没有找到匹配的账单</p></div>`;
   ex.sort((a,b)=>b.date.localeCompare(a.date)||(b.createdAt||0)-(a.createdAt||0));
   const groups={};ex.forEach(e=>(groups[e.date]=groups[e.date]||[]).push(e));
+  const first=live(t).filter(e=>e.type!=='payment').map(e=>e.date).sort()[0];
   return Object.entries(groups).map(([d,arr])=>{
     const dt=new Date(d+'T00:00');const wd='日一二三四五六'[dt.getDay()];
     const dayTotal=arr.filter(e=>e.type!=='payment').reduce((a,e)=>a+baseTotal(e,t),0);
-    return `<div class="dayh"><span>${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
+    return `<div class="dayh"><span>${first&&d>=first?`<b>Day ${dayDiff(first,d)+1}</b> · `:''}${dt.getMonth()+1}月${dt.getDate()}日 周${wd}</span><span>${dayTotal?fmt(dayTotal,t.base):''}</span></div><div class="list">${arr.map(e=>`<div class="sw${flashIds.has(e.id)?' flash':''}"><div class="sw-bg">🗑 删除</div>${rowHTML(t,e,me)}</div>`).join('')}</div>`;
   }).join('');
 }
 function rowHTML(t,e,me){
   if(e.type==='payment'){
-    return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款</div></div><div class="amt"><b>${fmt(e.amount,e.currency)}</b></div></div>`;
+    return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:#16a34a">💸</div><div class="mid"><div class="t">${esc(mname(t,e.from))} → ${esc(mname(t,e.to))}</div><div class="s">还款</div></div><div class="amt"><b>${fmt(e.amount,e.currency)}</b></div></div>`;
   }
   const c=cat(e.category),pids=Object.keys(e.payers);
   const payer=pids.length>1?`${pids.length} 人`:esc(mname(t,pids[0]));
@@ -424,20 +502,32 @@ function rowHTML(t,e,me){
     right=net>0?`<span class="pos">你借出<b>${fmt(net,t.base)}</b></span>`:net<0?`<span class="neg">你欠<b>${fmt(-net,t.base)}</b></span>`:`<span class="mut">不涉及<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
     if(!(me in paid)&&!(me in owed))right=`<span class="mut">没参与<b style="font-weight:500">${fmt(baseTotal(e,t),t.base)}</b></span>`;
   }
-  return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico">${c[1]}</div><div class="mid"><div class="t">${esc(e.title)}${e.receipt?' 📎':''}</div><div class="s">${payer} 付了 ${fmt(e.amount,e.currency)} · ${n} 人分</div></div><div class="amt">${right}</div></div>`;
+  return `<div class="row" data-act="edit" data-id="${e.id}"><div class="ico" style="--cc:${CATCOL[e.category]||'#64748b'}">${c[1]}</div><div class="mid"><div class="t">${esc(e.title)}${e.receipt?' 📎':''}</div><div class="s">${payer} 付了 ${fmt(e.amount,e.currency)} · ${n} 人分</div></div><div class="amt">${right}</div></div>`;
 }
+function billDebts(t,e){const{T,paid,owed}=baseSplit(e,t),res=[];if(!T)return res;
+  for(const o in owed)for(const p in paid){if(o===p)continue;const v=Math.round(owed[o]*paid[p]/T);if(v>0)res.push({from:o,to:p,amt:v})}return res}
 function balView(t){
-  const b=balances(t),simp=t.simplify!==false;
+  const b=balances(t),simp=t.simplify!==false,me=S.me[t.id];
   const ms=t.members.filter(m=>!m.deleted||b[m.id]);
   const mx=Math.max(1,...ms.map(m=>Math.abs(b[m.id]||0)));
-  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${S.me[t.id]===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
-  const xs=simp?simplify(b):pairwise(t);
-  const xrows=xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b>${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已还</button></div>`).join('');
-  return `<div class="card"><h3>每个人的结余 <span class="mut small" style="font-weight:400">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
-  <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">合并转账，让还款次数最少</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
-  <div class="card"><h3>怎么还钱</h3>${xrows||`<div class="empty" style="padding:16px"><div class="e">🎉</div>大家都结清了</div>`}
-  ${xrows?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}
-  <button class="btn ghost block" data-act="settle">＋ 手动记录一笔还款</button></div>`;
+  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${me===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right;flex:none">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
+  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已还 ✓</button></div>`).join('');
+  const done=`<div class="empty" style="padding:16px"><div class="e">🎉</div><div>大家都结清了，继续玩吧！</div></div>`;
+  const tail=xs=>`${xs.length?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}<button class="btn ghost block" data-act="settle">＋ 手动记录一笔还款</button>`;
+  let how;
+  if(simp){const xs=simplify(b);how=`<div class="card"><h3>💸 怎么还钱 <span class="mut small" style="font-weight:500">· 已合并成最少转账</span></h3>${xrows(xs)||done}${tail(xs)}</div>`}
+  else{
+    const bills=live(t).sort((a,c)=>c.date.localeCompare(a.date)||(c.createdAt||0)-(a.createdAt||0)).map(e=>{
+      if(e.type==='payment')return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>💸 还款</span><span class="mut small">${e.date.slice(5)}</span></div><div class="bl">${av(t,e.from)}<span>${esc(mname(t,e.from))}</span><span>已还给</span>${av(t,e.to)}<span>${esc(mname(t,e.to))}</span><b class="pos">${fmt(e.amount,e.currency)}</b></div></div>`;
+      const ds=billDebts(t,e);
+      return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}</span><span class="mut small">${e.date.slice(5)} · ${fmt(baseTotal(e,t),t.base)}</span></div>${ds.map(x=>`<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>`).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
+    const xs=pairwise(t);
+    how=`<div class="card"><h3>🧾 每笔账单谁欠谁 <span class="mut small" style="font-weight:500">· 没有合并</span></h3>${bills||'<p class="mut">还没有账单</p>'}</div>
+    <div class="card"><h3>🤝 两个人之间合计</h3>${xrows(xs)||done}${tail(xs)}</div>`;
+  }
+  return `<div class="card"><h3>👥 每个人的结余 <span class="mut small" style="font-weight:500">· 点名字看明细</span></h3>${rows||'<p class="mut">还没有成员</p>'}</div>
+  <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">${simp?'开：合并转账，让还款次数最少':'关：按每一笔账单分别显示谁欠谁'}</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
+  ${how}`;
 }
 function statsView(t){
   const ex=live(t).filter(e=>e.type!=='payment');
@@ -463,22 +553,29 @@ function statsView(t){
   <div class="card"><h3>每日花费</h3><div class="days">${dayBars}</div></div>`;
 }
 function setView(t){
-  const me=S.me[t.id],hasEx=live(t).length>0;
+  const me=S.me[t.id],hasEx=live(t).length>0,P=S.prefs;
   const ms=activeM(t).map(m=>`<div class="mem">${av(t,m.id)}<input value="${esc(m.name)}" data-ts="mname" data-id="${m.id}">${me===m.id?'<span class="tag">我</span>':`<button data-act="setMe" data-id="${m.id}">设为我</button>`}<button data-act="delMember" data-id="${m.id}">✕</button></div>`).join('');
-  return `<div class="card"><h3>旅行信息</h3>
+  const sw=(k,title,sub)=>`<div class="switch" style="margin:12px 0"><div><b>${title}</b><div class="mut small">${sub}</div></div><input type="checkbox" data-pref="${k}" ${P[k]?'checked':''}></div>`;
+  return `<div class="card"><h3>🎨 旅行信息</h3>
    <label class="fld"><span>名称</span><input data-ts="name" value="${esc(t.name)}"></label>
-   <div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
+   <div class="fld"><span>主题配色</span></div><div class="themes">${themesHTML(t.theme||'sea','setTheme')}</div>
+   <div class="fld"><span>封面</span></div><div class="chips">${EMOJI.map(e=>`<button class="chip ${t.emoji===e?'on':''}" data-act="setEmoji" data-e="${e}">${e}</button>`).join('')}</div>
    <label class="fld"><span>记账本位币 ${hasEx?'（已有账单，不能更改）':''}</span><select data-ts="base" ${hasEx?'disabled':''}>${CUR.map(c=>`<option value="${c}" ${c===t.base?'selected':''}>${c} ${CURNAME[c]}</option>`).join('')}</select></label></div>
-  <div class="card"><h3>成员</h3>${ms}
-   <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember" style="color:#fff">添加</button></div></div>
-  <div class="card"><h3>同步与备份</h3>
-   <button class="btn block" data-act="syncOut">⇅ 生成同步码 / 同步链接</button>
+  <div class="card"><h3>👥 成员</h3>${ms}
+   <div class="mem"><input id="newMember" placeholder="添加成员名字"><button class="btn sm primary" data-act="addMember">添加</button></div></div>
+  <div class="card"><h3>🔔 通知</h3>
+   ${sw('toast','朋友记账时弹出提醒','App 开着的时候，顶部弹出「谁记了什么」')}
+   ${sw('sound','提示音','叮咚一声（手机静音时不响）')}
+   ${sw('vibrate','震动','安卓手机有效，iPhone 网页不支持震动')}
+   <button class="btn block" data-act="testNotify">🔔 试一下提醒效果</button>
+   <p class="mut small" style="margin:6px 2px 0">右上角 🔔 是全部动态，红点数字 = 你还没看过的朋友操作。App 关着的时候不会推送，打开后在 🔔 里都能看到。</p></div>
+  <div class="card"><h3>☁️ 同步与备份</h3>
+   <button class="btn block" data-act="syncOut">${t.cloud?'🔗 邀请朋友加入':'⇅ 生成同步码 / 开启云同步'}</button>
    <button class="btn block" data-act="importSheet">📥 导入朋友的同步码</button>
    <button class="btn block" data-act="exportCSV">📄 导出 Excel 表格 (CSV)</button>
    <button class="btn block" data-act="backup">💾 下载完整备份（含收据照片）</button></div>
   <div class="card"><button class="btn danger block" data-act="delTrip">删除这个旅行</button></div>`;
 }
-
 /* ================= Sheet / 工具 ================= */
 function openSheet(html){const r=$('#sheet-root');r.innerHTML=`<div class="backdrop" data-act="closeSheet"></div><div class="sheet" id="sheet">${html}</div>`;r.classList.add('open');document.body.style.overflow='hidden'}
 function closeSheet(){const r=$('#sheet-root');r.classList.remove('open');r.innerHTML='';document.body.style.overflow='';ed=null}
@@ -584,24 +681,27 @@ async function fetchRate(from,to){
 }
 
 /* ================= 新建旅行 ================= */
+let _nt={theme:'sea'};
 function openNewTrip(){
-  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>新建旅行</b><button class="go" data-act="createTrip">创建</button></div>
+  _nt={theme:'sea'};
+  openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>开始新旅行 ✈️</b><button class="go" data-act="createTrip">创建</button></div>
   <div class="sheet-body">
-   <label class="fld"><span>旅行名称</span><input id="nt-name" placeholder="例如：东京 5 日游"></label>
+   <label class="fld"><span>去哪儿玩？</span><input id="nt-name" placeholder="例如：大阪京都 6 日游"></label>
+   <div class="fld"><span>选个心情</span></div><div class="themes" id="nt-themes">${themesHTML(_nt.theme,'ntTheme')}</div>
    <label class="fld"><span>记账本位币（最后按这个币种结算）</span><select id="nt-base">${CUR.map(c=>`<option value="${c}">${c} ${CURNAME[c]}</option>`).join('')}</select></label>
    <label class="fld"><span>你的名字</span><input id="nt-me" placeholder="我"></label>
-   <label class="fld"><span>朋友们（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="3" placeholder="小明 小红 阿杰"></textarea></label>
-   <p class="mut small">之后也可以在「设置」里增删成员。</p></div>`);
-  setTimeout(()=>$('#nt-name')?.focus(),250);
+   <label class="fld"><span>一起去的朋友（空格、逗号或换行隔开）</span><textarea id="nt-others" rows="2" placeholder="小明 小红 阿杰"></textarea></label>
+   <p class="mut small">之后也可以在「设置」里增删成员、换主题。</p></div>`);
 }
+const THEME_EMOJI={sea:'🏝️',sunset:'🌅',sakura:'🌸',snow:'🏔️',forest:'🏕️',city:'🏙️',desert:'🐫',lagoon:'🐠'};
 function createTrip(){
   const name=$('#nt-name').value.trim()||'我的旅行',base=$('#nt-base').value;
   const meName=$('#nt-me').value.trim()||'我';
   const others=$('#nt-others').value.split(/[\s,，、;；]+/).map(s=>s.trim()).filter(Boolean);
   const names=[meName,...others.filter(n=>n!==meName)];
-  const t={id:uid(),name,base,emoji:EMOJI[Math.floor(Math.random()*EMOJI.length)],members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
-  S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.cur=t.id;view={tab:'list',q:'',cat:''};
-  save();closeSheet();render();toast(sb?'旅行已创建 ☁️ 点右上角邀请朋友':'旅行已创建，开始记账吧');
+  const t={id:uid(),name,base,theme:_nt.theme,emoji:THEME_EMOJI[_nt.theme]||'🧳',members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
+  S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.seen[t.id]=now();S.cur=t.id;view={tab:'list',q:'',cat:''};animNext=true;
+  save();closeSheet();render();confetti();toast(sb?'出发啦 ✈️ 点右上角 ☁️ 邀请朋友':'出发啦 ✈️ 开始记账吧');
 }
 
 /* ================= 账单编辑器 ================= */
@@ -640,10 +740,10 @@ function renderEditor(focus){
      <div class="mrow" style="margin-top:8px"><div class="n">税 / 服务费 / 小费<div class="mut small">按每人品项金额比例分摊</div></div><input data-f="extraStr" inputmode="decimal" placeholder="0" value="${esc(ed.extraStr)}"></div>`;
   }else{
     const key=ed.mode,suf={exact:c,percent:'%',shares:'份'}[key];
-    split=M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="${key}.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed[key][m.id]??'')}"><span class="mut small" style="width:30px">${suf}</span></div>`).join('');
+    split=M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="${key}.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed[key][m.id]??'')}"><span class="u">${suf}</span></div>`).join('');
     if(key==='percent')split+=`<button class="btn sm" data-act="edPctEven">平均分配百分比</button>`;
   }
-  const multi=ed.payMode==='multi'?`<div class="card" style="margin:6px 0 0;padding:8px 12px"><div class="mut small">每人付了多少</div>${M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="payers.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed.payers[m.id]??'')}"><span class="mut small" style="width:30px">${c}</span></div>`).join('')}</div>`:'';
+  const multi=ed.payMode==='multi'?`<div class="card" style="margin:6px 0 0;padding:8px 12px"><div class="mut small">每人付了多少</div>${M.map(m=>`<div class="mrow">${av(t,m.id)}<div class="n">${esc(m.name)}</div><input data-f="payers.${m.id}" inputmode="decimal" placeholder="0" value="${esc(ed.payers[m.id]??'')}"><span class="u">${c}</span></div>`).join('')}</div>`:'';
   $('#sheet').innerHTML=`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>${ed.isNew?'记一笔':'编辑账单'}</b><button class="go" data-act="edSave">保存</button></div>
   <div class="sheet-body">
    <div class="scanbar" style="margin-top:0">
@@ -712,7 +812,8 @@ function edPreview(){
   const tot=$('#ed-total');if(tot)tot.textContent=fmt(A||0,c);
   const conv=$('#ed-conv');if(conv)conv.textContent=A>0&&e.rate>0?`≈ ${fmt(baseTotal(e,t),t.base)}`:'';
   let h='';
-  if(err.length)h=err.map(x=>`<div class="err">⚠️ ${esc(x)}</div>`).join('');
+  if(err.length===1&&err[0]==='请输入金额'&&!(ed.mode==='items'?ed.items.some(i=>i.amountStr):ed.amountStr))h=`<div class="mut">💡 输入金额后，这里会显示每个人分多少</div>`;
+  else if(err.length)h=err.map(x=>`<div class="err">⚠️ ${esc(x)}</div>`).join('');
   else{const sh=sharesOf(e),bs=baseSplit(e,t);
     h=`<div class="ok" style="margin-bottom:4px">✓ 每人分摊</div>`+Object.keys(sh).map(id=>`<div class="pr">${av(t,id)}<span>${esc(mname(t,id))}</span><b>${fmt(sh[id],c)}</b>${c!==t.base?`<span class="mut small" style="flex:none">≈${fmt(bs.owed[id]||0,t.base)}</span>`:''}</div>`).join('');}
   const p=$('#ed-preview');if(p)p.innerHTML=h;
@@ -779,7 +880,7 @@ function mergeTrip(inc){
   const loc=S.trips[inc.id];
   if(!loc){S.trips[inc.id]=inc;if(!S.order.includes(inc.id))S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
   if(inc.cloud)loc.cloud=true;
-  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
+  if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','theme','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
   for(const m of inc.members){const lm=mem(loc,m.id);if(!lm)loc.members.push(m);else if((m.updatedAt||0)>(lm.updatedAt||0))Object.assign(lm,m)}
   let added=0,updated=0;
   for(const e of inc.expenses){const le=loc.expenses.find(x=>x.id===e.id);
@@ -872,7 +973,8 @@ function openMember(id){
 function feedView(t){
   const ev=[...t.expenses].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,100);
   if(!ev.length)return `<div class="empty"><div class="e">🔔</div><p>大家记账、修改、删除都会出现在这里</p></div>`;
-  return `<div class="card">${ev.map(e=>{const who=e.by?esc(mname(t,e.by)):'有人',act=e.deleted?'删除了':((e.updatedAt||0)-(e.createdAt||0)<3000?'添加了':'修改了');
+  const seen=S._seenBefore??0;
+  return `<div class="card"><h3>🔔 动态 <span class="mut small" style="font-weight:500">· 大家最近做了什么</span></h3>${ev.map(e=>{const who=e.by?esc(mname(t,e.by)):'有人',act=e.deleted?'删除了':((e.updatedAt||0)-(e.createdAt||0)<3000?'添加了':'修改了');
     const what=e.type==='payment'?`${esc(mname(t,e.from))} → ${esc(mname(t,e.to))} 的还款`:`「${esc(e.title)}」`;
     return `<div class="feed">${e.by?av(t,e.by):'<span class="av" style="background:#999">?</span>'}<div class="tx"><b>${who}</b> ${act} ${what} <b>${fmt(e.amount,e.currency)}</b><div class="mut">${relTime(e.updatedAt||0)}</div></div>
     ${e.deleted?`<button class="btn sm" data-act="restore" data-id="${e.id}">恢复</button>`:`<button class="btn sm" data-act="edit" data-id="${e.id}">查看</button>`}</div>`}).join('')}</div>`;
@@ -883,7 +985,11 @@ const ACT={
   home(){S.cur=null;persist();render();scrollTo(0,0)},
   open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};animNext=true;persist();render();scrollTo(0,0);refreshCurrent()},
   newTrip:openNewTrip,createTrip,
-  tab(el){if(view.tab===el.dataset.t)return;view.tab=el.dataset.t;animNext=true;render();buzz(5)},
+  tab(el){if(view.tab===el.dataset.t)return;view.tab=el.dataset.t;animNext=true;render();scrollTo({top:0,behavior:'smooth'});buzz(5)},
+  bell(){view.tab='feed';animNext=true;render();scrollTo({top:0,behavior:'smooth'})},
+  setTheme(el){const t=trip();t.theme=el.dataset.k;t.metaAt=now();save();render();buzz(8)},
+  ntTheme(el){_nt.theme=el.dataset.k;document.querySelectorAll('#nt-themes .th').forEach(b=>b.classList.toggle('on',b===el));const th=THEMES[_nt.theme],rs=document.documentElement.style;rs.setProperty('--pri',th.c[0]);rs.setProperty('--pri2',th.c[1])},
+  testNotify(){const t=trip(),o=activeM(t).find(m=>m.id!==S.me[t.id])||activeM(t)[0];notify(`🔔 ${o?o.name:'朋友'} 记了一笔：拉面 ${fmt(toMinor(980,'JPY'),'JPY')}`);if(!S.prefs.toast)toast('（弹出提醒已关闭）')},
   fcat(el){view.cat=el.dataset.c;animNext=true;render()},
   setMe(el){S.me[S.cur]=el.dataset.id;persist();render()},
   add(){openEditor(null)},
@@ -970,6 +1076,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
   if(el.id==='quick-scan'&&el.files[0]){const f=el.files[0];openEditor(null);scanReceipt(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
+  if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
   if(el.dataset.ts&&t){const k=el.dataset.ts;
     if(k==='name'){t.name=el.value.trim()||t.name;t.metaAt=now()}
     if(k==='base'){t.base=el.value;t.metaAt=now()}
@@ -978,6 +1085,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
     save();render();
   }
 });
+document.addEventListener('touchend',()=>{if(S.prefs.sound&&!chime.ctx){try{const C=window.AudioContext||window.webkitAudioContext;if(C)chime.ctx=new C()}catch{}}else if(chime.ctx&&chime.ctx.state==='suspended')chime.ctx.resume()},{passive:true});
 document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='newMember')ACT.addMember()});
 
 /* ================= 启动 ================= */
