@@ -32,10 +32,30 @@ async function send(s: Sub, payload: Record<string, unknown>) {
   }
 }
 
+const rateCache = new Map<string, { at: number; v: unknown }>();
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const body = await req.json().catch(() => ({}));
   const clip = (v: unknown, n: number) => String(v ?? "").slice(0, n);
+
+  // 实时汇率：浏览器不能直接读 Wise（没有 CORS），这里代取 Wise 的中间价
+  if (body.rate) {
+    const f = String(body.rate.from ?? "").toUpperCase(), t = String(body.rate.to ?? "").toUpperCase();
+    if (!/^[A-Z]{3}$/.test(f) || !/^[A-Z]{3}$/.test(t)) return json({ error: "bad currency" }, 400);
+    const k = f + t, hit = rateCache.get(k);
+    if (hit && Date.now() - hit.at < 5 * 60e3) return json(hit.v);
+    try {
+      const r = await fetch(`https://wise.com/rates/live?source=${f}&target=${t}`, { headers: { "User-Agent": "Mozilla/5.0" } });
+      const j = await r.json();
+      if (!(j.value > 0)) return json({ error: "no rate" }, 502);
+      const v = { rate: j.value, time: j.time ?? Date.now(), src: "wise" };
+      rateCache.set(k, { at: Date.now(), v });
+      return json(v);
+    } catch (e) {
+      return json({ error: (e as Error).message }, 502);
+    }
+  }
 
   // 测试：只发给这一台手机
   if (body.endpoint) {

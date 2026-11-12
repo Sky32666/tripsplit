@@ -825,7 +825,7 @@ async function scanReceipt(file,lang){
   if(ed.mode==='items'&&r.items.length)applyScanItems();
   renderEditor();buzz(15);
   toast(r.total!=null?`✓ 已识别 ${fmt(toMinor(r.total,ed.currency),ed.currency)}，请核对`:'没认出总金额，请手动输入');
-  if(ed.currency!==t.base&&!num(ed.rate)){const rt=await fetchRate(ed.currency,t.base);if(rt&&ed){ed.rate=String(+rt.toPrecision(6));renderEditor()}}
+  if(ed.currency!==t.base&&!num(ed.rate))autoRate(true);
 }
 function applyScanItems(){
   const r=ed.scan&&ed.scan.r;if(!r||!r.items.length)return;
@@ -833,11 +833,28 @@ function applyScanItems(){
   ed.mode='items';ed.items=r.items.map(it=>({name:it.name,amountStr:String(it.amount),people:[...all]}));
   ed.extraStr=r.extra?String(+r.extra.toFixed(2)):'';
 }
+// 汇率：优先用 Wise 实时中间价（经 Supabase 函数代取），取不到再用公开参考汇率
+const _rateCache={};
 async function fetchRate(from,to){
-  try{const j=await(await fetch(`https://open.er-api.com/v6/latest/${from}`)).json();if(j.rates?.[to])return j.rates[to]}catch{}
-  try{const j=await(await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`)).json();if(j.rates?.[to])return j.rates[to]}catch{}
+  const k=from+to,c=_rateCache[k];if(c&&Date.now()-c.at<5*60e3)return c;
+  const ok=v=>v&&v.rate>0?(_rateCache[k]={...v,at:Date.now()}):null;
+  if(CFG.supabaseUrl)try{const r=await fetch(fnUrl(),{method:'POST',headers:fnHeaders(),body:JSON.stringify({rate:{from,to}})});const j=await r.json();if(j.rate>0)return ok({rate:j.rate,time:j.time||Date.now(),src:'wise'})}catch{}
+  try{const j=await(await fetch(`https://open.er-api.com/v6/latest/${from}`)).json();if(j.rates?.[to])return ok({rate:j.rates[to],time:(j.time_last_update_unix||0)*1000||Date.now(),src:'ref'})}catch{}
+  try{const j=await(await fetch(`https://api.frankfurter.app/latest?from=${from}&to=${to}`)).json();if(j.rates?.[to])return ok({rate:j.rates[to],time:Date.now(),src:'ref'})}catch{}
   return null;
 }
+const rateLabel=r=>r?(r.src==='wise'?`Wise 实时汇率 · ${new Date(r.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`:'参考汇率（Wise 暂时取不到）'):'';
+// 新账单选了外币：自动拿最新 Wise 汇率（旧账单不动，保持当时的汇率）
+async function autoRate(force){
+  if(!ed||(!ed.isNew&&!force))return;const t=trip(),c=ed.currency;if(c===t.base)return;
+  ed.rateSrc='⏳ 正在获取 Wise 汇率…';updRateSrc();
+  const r=await fetchRate(c,t.base);
+  if(!ed||ed.currency!==c)return;
+  if(r){ed.rate=String(+r.rate.toPrecision(6));ed.rateSrc=rateLabel(r);renderEditor()}
+  else{ed.rateSrc=ed.rate?'没网，先用上次的汇率':'获取失败，请手动填写汇率';updRateSrc()}
+  return r;
+}
+function updRateSrc(){const el=$('#ed-rsrc');if(el)el.textContent=ed.rateSrc||''}
 
 /* ================= 新建旅行 ================= */
 const CODE_AB='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -940,7 +957,7 @@ function openEditor(id){
       items:[],extraStr:'',note:'',receipt:null};
   }
   if(!ed.items.length)ed.items=[{name:'',amountStr:'',people:[...M]}];
-  openSheet('');renderEditor(true);
+  openSheet('');renderEditor(true);autoRate();
 }
 function renderEditor(focus){
   const t=trip(),c=ed.currency;
@@ -969,7 +986,7 @@ function renderEditor(focus){
    <input class="in" data-f="title" placeholder="买了什么？例如：晚餐烧肉" value="${esc(ed.title)}" style="font-size:17px">
    <div class="amtrow"><select data-f="currency">${CUR.map(x=>`<option value="${x}" ${x===c?'selected':''}>${x}</option>`).join('')}</select>
     ${ed.mode==='items'?`<div class="bigamt" id="ed-total"></div>`:`<input class="bigamt" data-f="amountStr" inputmode="decimal" placeholder="0" value="${esc(ed.amountStr)}">`}</div>
-   ${c!==t.base?`<div class="ratebox">1 ${c} = <input data-f="rate" inputmode="decimal" placeholder="汇率" value="${esc(ed.rate)}"> ${t.base} <button class="btn sm" data-act="edRate">🌐 实时汇率</button><span id="ed-conv" class="mut small" style="width:100%"></span></div>`:''}
+   ${c!==t.base?`<div class="ratebox">1 ${c} = <input data-f="rate" inputmode="decimal" placeholder="汇率" value="${esc(ed.rate)}"> ${t.base} <button class="btn sm" data-act="edRate">🔄 Wise</button><span id="ed-conv" class="mut small" style="width:100%"></span><span id="ed-rsrc" class="mut small" style="width:100%">${esc(ed.rateSrc||'')}</span></div>`:''}
    <div class="chips" style="margin-top:10px">${CATS.map(x=>`<button class="chip ${ed.category===x[0]?'on':''}" data-act="edCat" data-c="${x[0]}">${x[1]} ${x[2]}</button>`).join('')}</div>
    <div class="grid2"><label class="fld"><span>日期</span><input type="date" data-f="date" value="${ed.date}"></label>
     <label class="fld"><span>谁付的钱</span><select data-f="payer">${M.map(m=>`<option value="${m.id}" ${ed.payMode==='single'&&ed.payer===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}<option value="__multi" ${ed.payMode==='multi'?'selected':''}>多人一起付…</option></select></label></div>
@@ -1358,8 +1375,8 @@ const ACT={
   edAddItem(){ed.items.push({name:'',amountStr:'',people:activeM(trip()).map(m=>m.id)});renderEditor();const ins=document.querySelectorAll('.item .r input:first-child');ins[ins.length-1]?.focus()},
   edDelItem(el){ed.items.splice(+el.dataset.i,1);if(!ed.items.length)ed.items.push({name:'',amountStr:'',people:activeM(trip()).map(m=>m.id)});renderEditor()},
   edPctEven(){const ids=Object.keys(ed.percent).filter(k=>num(ed.percent[k])>0);const use=ids.length?ids:activeM(trip()).map(m=>m.id);ed.percent={};use.forEach(id=>ed.percent[id]=String(+(100/use.length).toFixed(4)));renderEditor()},
-  async edRate(el){const t=trip();el.textContent='获取中…';const r=await fetchRate(ed.currency,t.base);
-    if(r){ed.rate=String(+r.toPrecision(6));renderEditor();toast(`已更新：1 ${ed.currency} = ${ed.rate} ${t.base}`)}else{el.textContent='🌐 实时汇率';toast('获取失败，请手动填写汇率')}},
+  async edRate(el){const t=trip();el.textContent='获取中…';delete _rateCache[ed.currency+t.base];const r=await autoRate(true);
+    if(r)toast(`已更新：1 ${ed.currency} = ${ed.rate} ${t.base}`);else{el.textContent='🔄 Wise';toast('获取失败，请手动填写汇率')}},
   edDelReceipt(){ed.receipt=null;renderEditor()},
   viewImg(el){const d=document.createElement('div');d.className='viewer';d.innerHTML=`<img src="${el.src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)},
   edSave,
@@ -1416,12 +1433,12 @@ document.addEventListener('touchend',async()=>{
     const e2=$('#ptr');if(e2){e2.style.opacity=0;e2.style.transform=''}}
 });
 document.addEventListener('input',ev=>{const el=ev.target;
-  if(ed&&el.dataset.f&&el.tagName!=='SELECT'){setPath(ed,el.dataset.f,el.value);edPreview()}
+  if(ed&&el.dataset.f&&el.tagName!=='SELECT'){setPath(ed,el.dataset.f,el.value);if(el.dataset.f==='rate'){ed.rateSrc='✏️ 手动填写的汇率';updRateSrc()}edPreview()}
   if(el.id==='search'){view.q=el.value;$('#explist').innerHTML=listItems(trip())}
 });
 document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
   if(ed&&el.tagName==='SELECT'&&el.dataset.f){
-    if(el.dataset.f==='currency'){ed.currency=el.value;ed.rate=el.value===t.base?'':String(t.rates?.[el.value]||'');renderEditor()}
+    if(el.dataset.f==='currency'){ed.currency=el.value;ed.rate=el.value===t.base?'':String(t.rates?.[el.value]||'');ed.rateSrc='';renderEditor();autoRate(!ed.isNew)}
     else if(el.dataset.f==='payer'){if(el.value==='__multi'){ed.payMode='multi';if(!Object.keys(ed.payers).length&&ed.amountStr)ed.payers={[ed.payer]:ed.amountStr}}else{ed.payMode='single';ed.payer=el.value}renderEditor()}
   }
   if((el.id==='ed-receipt'||el.id==='ed-receipt2')&&el.files[0]&&ed)scanReceipt(el.files[0]);
