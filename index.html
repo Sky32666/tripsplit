@@ -143,6 +143,8 @@ textarea.code{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,monospace
 <div id="app"></div>
 <div id="sheet-root"></div>
 <div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.min.js"></script>
+<script src="config.js?v=2"></script>
 <script>
 'use strict';
 /* ================= 基础 ================= */
@@ -171,8 +173,82 @@ const plain=(m,c)=>String(+fromMinor(m,c).toFixed(digits(c)));
 
 /* ================= 存储 ================= */
 let S=load();
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.trips)return Object.assign({order:[],me:{},cur:null},s)}catch{}return{trips:{},order:[],me:{},cur:null}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('存储空间满了，试试删除部分收据照片')}}
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.trips)return Object.assign({order:[],me:{},cur:null,synced:{}},s)}catch{}return{trips:{},order:[],me:{},cur:null,synced:{}}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('存储空间满了，试试删除部分收据照片')}}
+function save(){persist();scheduleFlush()}
+
+/* ================= 云端同步（Supabase，和 manmanlai 同一套） ================= */
+const CFG=window.LVZHANG||{};
+const cloudOn=!!(CFG.supabaseUrl&&CFG.supabaseKey&&window.supabase&&!/YOUR_/.test(CFG.supabaseUrl));
+let sb=null;try{if(cloudOn)sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseKey)}catch(e){console.warn(e)}
+let syncState='ok',flushTimer=null,flushing=false,chan=null,chanKey='';
+function rowsOf(t){
+  const rows=[{id:t.id,trip_id:t.id,kind:'trip',data:{name:t.name,base:t.base,emoji:t.emoji,simplify:t.simplify,rates:t.rates||{},createdAt:t.createdAt,metaAt:t.metaAt||0},updated_at:t.metaAt||0}];
+  t.members.forEach(m=>rows.push({id:m.id,trip_id:t.id,kind:'member',data:m,updated_at:m.updatedAt||0}));
+  t.expenses.forEach(e=>rows.push({id:e.id,trip_id:t.id,kind:'expense',data:e,updated_at:e.updatedAt||0}));
+  return rows;
+}
+function pendingRows(){const out=[];for(const id in S.trips){const t=S.trips[id];if(!t.cloud)continue;for(const r of rowsOf(t))if(r.updated_at>(S.synced[r.id]||0))out.push(r)}return out}
+function scheduleFlush(){if(!sb)return;clearTimeout(flushTimer);flushTimer=setTimeout(flush,300)}
+async function flush(){
+  if(!sb||flushing)return;
+  const rows=pendingRows();if(!rows.length){setSync('ok');return}
+  flushing=true;setSync('busy');let ok=false;
+  try{for(let i=0;i<rows.length;i+=100){const chunk=rows.slice(i,i+100);const{error}=await sb.from('ts_rows').upsert(chunk);if(error)throw error;
+      chunk.forEach(r=>S.synced[r.id]=Math.max(S.synced[r.id]||0,r.updated_at))}
+    persist();ok=true;setSync('ok')}
+  catch(e){console.warn('flush',e);setSync(navigator.onLine===false?'offline':'err')}
+  finally{flushing=false}
+  if(ok&&pendingRows().length)scheduleFlush();
+}
+function setSync(s){syncState=s;const el=$('#syncdot');if(el)el.textContent=syncIcon(trip())}
+function syncIcon(t){if(!t||!t.cloud)return'⇅';return{ok:'☁️',busy:'⏳',err:'⚠️',offline:'📴'}[syncState]||'☁️'}
+function applyRow(r){
+  if(!r||!r.id||!r.data)return;
+  let t=S.trips[r.trip_id];
+  if(r.kind==='trip'){
+    if(!t){t=S.trips[r.trip_id]={id:r.trip_id,members:[],expenses:[],...r.data,rates:r.data.rates||{},cloud:true};if(!S.order.includes(t.id))S.order.unshift(t.id)}
+    else if((r.data.metaAt||0)>(t.metaAt||0))Object.assign(t,r.data,{rates:{...(t.rates||{}),...(r.data.rates||{})}});
+    else t.rates={...(r.data.rates||{}),...(t.rates||{})};
+  }else{
+    if(!t)return;
+    const arr=r.kind==='member'?t.members:t.expenses,i=arr.findIndex(x=>x.id===r.id);
+    if(i<0)arr.push(r.data);else if((r.data.updatedAt||0)>(arr[i].updatedAt||0))arr[i]=r.data;
+  }
+  S.synced[r.id]=Math.max(S.synced[r.id]||0,r.updated_at||0);
+}
+async function pullTrip(id){
+  if(!sb)return false;let all=[];
+  for(let from=0;;from+=1000){const{data,error}=await sb.from('ts_rows').select('*').eq('trip_id',id).range(from,from+999);if(error)throw error;all=all.concat(data);if(data.length<1000)break}
+  if(!all.length)return false;
+  all.sort((a,b)=>(a.kind==='trip'?0:1)-(b.kind==='trip'?0:1)).forEach(applyRow);persist();return true;
+}
+function renderSoft(){
+  const a=document.activeElement;
+  if(a&&$('#app').contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){if(a.id==='search')$('#explist').innerHTML=listItems(trip());return}
+  render();
+}
+function subscribe(){
+  if(!sb)return;const t=trip(),key=t&&t.cloud?t.id:'';
+  if(key===chanKey)return;
+  if(chan){sb.removeChannel(chan);chan=null}
+  chanKey=key;if(!key)return;
+  chan=sb.channel('ts-'+key).on('postgres_changes',{event:'*',schema:'public',table:'ts_rows',filter:'trip_id=eq.'+key},p=>{if(p.new&&p.new.id){applyRow(p.new);persist();renderSoft()}}).subscribe();
+}
+async function refreshCurrent(){
+  const t=trip();if(!sb||!t||!t.cloud)return;
+  try{await pullTrip(t.id);renderSoft()}catch(e){console.warn('pull',e);setSync(navigator.onLine===false?'offline':'err')}
+  flush();
+}
+async function joinTrip(id){
+  if(S.trips[id]){S.cur=id;view={tab:'list',q:'',cat:''};persist();render();refreshCurrent();return}
+  if(!sb)return toast('云同步未配置，无法通过链接加入');
+  toast('正在加入…');
+  try{const ok=await pullTrip(id);if(!ok)return toast('找不到这个旅行，链接可能不完整')}
+  catch(e){console.warn(e);return toast('连接云端失败：'+(e.message||'请检查网络'))}
+  S.cur=id;view={tab:'list',q:'',cat:''};persist();closeSheet();render();toast('已加入「'+trip().name+'」，先选一下你是谁');
+}
+const joinLink=t=>location.origin+location.pathname+'#join='+t.id;
 let view={tab:'list',q:'',cat:''};
 let ed=null;
 const trip=()=>S.trips[S.cur];
@@ -238,6 +314,7 @@ const involves=(e,id)=>id in payersOf(e)||id in sharesOf(e);
 function render(){
   const t=trip();
   $('#app').innerHTML=t?tripView(t):homeView();
+  subscribe();
 }
 function homeView(){
   const ids=S.order.filter(id=>S.trips[id]);
@@ -262,9 +339,9 @@ function tripView(t){
   const who=me?'':`<div class="banner"><b>你是谁？</b><span class="mut small"> 选一下，就能看到“你欠 / 你借出”</span><div class="pills" style="margin-top:8px">${activeM(t).map(m=>`<button class="pill on" data-act="setMe" data-id="${m.id}">${av(t,m.id)}${esc(m.name)}</button>`).join('')}</div></div>`;
   const tabs=[['list','账单'],['bal','结余'],['stats','统计'],['set','设置']];
   const body={list:listView,bal:balView,stats:statsView,set:setView}[view.tab](t);
-  return `<header class="top"><button class="icon" data-act="home">‹</button><div class="ttl">${t.emoji||''} ${esc(t.name)}</div><button class="icon" data-act="syncOut" title="同步给朋友">⇅</button></header>
+  return `<header class="top"><button class="icon" data-act="home">‹</button><div class="ttl">${t.emoji||''} ${esc(t.name)}</div><button class="icon" data-act="syncOut" title="邀请 / 同步" id="syncdot">${syncIcon(t)}</button></header>
   <main class="wrap">${who}
-  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big">${fmt(total,t.base)}</div>${meLine}</section>
+  <section class="hero"><div class="lbl">总花费 · ${activeM(t).length} 人 · ${CURNAME[t.base]||t.base}</div><div class="big">${fmt(total,t.base)}</div>${meLine}${t.cloud?'':(sb?`<div class="me" data-act="cloudOn" style="cursor:pointer"><span>📱 仅存在本机</span><b>开启云同步 ›</b></div>`:'')}</section>
   <nav class="tabs">${tabs.map(([k,l])=>`<button class="${view.tab===k?'on':''}" data-act="tab" data-t="${k}">${l}</button>`).join('')}</nav>
   <div id="tabbody">${body}</div></main>
   ${view.tab==='list'||view.tab==='bal'?`<button class="fab" data-act="add">＋ 记一笔</button>`:''}`;
@@ -394,9 +471,9 @@ function createTrip(){
   const meName=$('#nt-me').value.trim()||'我';
   const others=$('#nt-others').value.split(/[\s,，、;；]+/).map(s=>s.trim()).filter(Boolean);
   const names=[meName,...others.filter(n=>n!==meName)];
-  const t={id:uid(),name,base,emoji:EMOJI[Math.floor(Math.random()*EMOJI.length)],members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now()};
+  const t={id:uid(),name,base,emoji:EMOJI[Math.floor(Math.random()*EMOJI.length)],members:names.map((n,i)=>({id:uid(),name:n,color:COLORS[i%COLORS.length],updatedAt:now()})),expenses:[],rates:{},simplify:true,createdAt:now(),metaAt:now(),cloud:!!sb};
   S.trips[t.id]=t;S.order.unshift(t.id);S.me[t.id]=t.members[0].id;S.cur=t.id;view={tab:'list',q:'',cat:''};
-  save();closeSheet();render();toast('旅行已创建，开始记账吧');
+  save();closeSheet();render();toast(sb?'旅行已创建 ☁️ 点右上角邀请朋友':'旅行已创建，开始记账吧');
 }
 
 /* ================= 账单编辑器 ================= */
@@ -507,7 +584,7 @@ function edSave(){
   Object.assign(e,calc,{title:ed.title.trim()||cat(ed.category)[2],category:ed.category,date:ed.date||today(),note:ed.note.trim(),updatedAt:now()});
   if(ed.receipt)e.receipt=ed.receipt;else delete e.receipt;
   if(ed.isNew)t.expenses.push(e);
-  t.rates=t.rates||{};if(calc.currency!==t.base)t.rates[calc.currency]=calc.rate;t.lastCurrency=calc.currency;
+  t.rates=t.rates||{};if(calc.currency!==t.base&&t.rates[calc.currency]!==calc.rate){t.rates[calc.currency]=calc.rate;t.metaAt=now()}t.lastCurrency=calc.currency;
   save();closeSheet();render();toast('已保存 ✓');
 }
 
@@ -554,7 +631,8 @@ async function decodeAny(text){
 function mergeTrip(inc){
   if(!inc||!inc.id||!Array.isArray(inc.members)||!Array.isArray(inc.expenses))throw new Error('bad');
   const loc=S.trips[inc.id];
-  if(!loc){S.trips[inc.id]=inc;S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
+  if(!loc){S.trips[inc.id]=inc;if(!S.order.includes(inc.id))S.order.unshift(inc.id);return{isNew:true,added:inc.expenses.filter(e=>!e.deleted).length,updated:0}}
+  if(inc.cloud)loc.cloud=true;
   if((inc.metaAt||0)>(loc.metaAt||0)){for(const k of['name','base','emoji','simplify'])if(k in inc)loc[k]=inc[k];loc.metaAt=inc.metaAt}
   for(const m of inc.members){const lm=mem(loc,m.id);if(!lm)loc.members.push(m);else if((m.updatedAt||0)>(lm.updatedAt||0))Object.assign(lm,m)}
   let added=0,updated=0;
@@ -565,6 +643,7 @@ function mergeTrip(inc){
   return{isNew:false,added,updated};
 }
 async function doImport(text){
+  const jm=String(text).match(/#join=([A-Za-z0-9_-]+)/);if(jm)return joinTrip(jm[1]);
   let obj;try{obj=await decodeAny(text)}catch{return toast('同步码无法识别，请确认复制完整')}
   let r;try{r=mergeTrip(obj.trip)}catch{return toast('数据格式不对')}
   S.cur=obj.trip.id;view={tab:'list',q:'',cat:''};save();closeSheet();render();
@@ -572,7 +651,22 @@ async function doImport(text){
   else toast(r.added||r.updated?`合并完成：新增 ${r.added} 笔，更新 ${r.updated} 笔`:'已经是最新的了 ✓');
 }
 async function openSyncOut(){
-  const t=trip(),code=await encodeTrip(t);
+  const t=trip();
+  if(t.cloud&&sb){
+    const link=joinLink(t),st={ok:'☁️ 已全部同步',busy:'⏳ 正在上传…',err:'⚠️ 上传失败，稍后会自动重试',offline:'📴 离线中，联网后自动上传'}[syncState];
+    return openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>邀请朋友</b><span style="width:40px"></span></div>
+    <div class="sheet-body">
+     <div class="banner">${st}${pendingRows().length?` · 待上传 ${pendingRows().length} 条`:''}</div>
+     <div class="step"><b>1</b><div>把邀请链接发到旅行群</div></div>
+     <div class="step"><b>2</b><div>朋友打开链接，选一下自己是谁</div></div>
+     <div class="step"><b>3</b><div>之后谁记账，所有人手机<b>实时更新</b> ✨ 没网也能记，联网后自动上传</div></div>
+     <button class="btn primary block" data-act="copyText" data-v="${esc(link)}">🔗 复制邀请链接</button>
+     ${navigator.share?`<button class="btn block" data-act="shareText" data-v="${esc(link)}">📤 用系统分享发送</button>`:''}
+     <textarea class="in code" readonly style="height:70px">${esc(link)}</textarea>
+     <button class="btn ghost block" data-act="syncNow">🔄 立即刷新</button>
+     <p class="mut small">⚠️ 拿到链接的人都能查看和修改这个账本，只发给一起旅行的朋友。</p></div>`);
+  }
+  const code=await encodeTrip(t);
   const isWeb=/^https?:/.test(location.protocol);
   const link=isWeb?location.origin+location.pathname+'#sync='+code:'';
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">关闭</button><b>同步给朋友</b><span style="width:40px"></span></div>
@@ -584,7 +678,8 @@ async function openSyncOut(){
    <button class="btn block" data-act="copyText" data-v="${esc(code)}">📋 复制同步码</button>
    ${navigator.share?`<button class="btn block" data-act="shareText" data-v="${esc(isWeb?link:code)}">📤 用系统分享发送</button>`:''}
    <textarea class="in code" readonly>${esc(isWeb?link:code)}</textarea>
-   <p class="mut small">同步码不包含收据照片。链接约 ${Math.ceil((isWeb?link:code).length/1000)}k 字符。</p></div>`);
+   <p class="mut small">同步码不包含收据照片。链接约 ${Math.ceil((isWeb?link:code).length/1000)}k 字符。</p>
+   ${sb?`<button class="btn primary block" data-act="cloudOn">☁️ 改用云同步（推荐，实时更新）</button>`:''}</div>`);
 }
 function openImport(){
   openSheet(`<div class="sheet-head"><button data-act="closeSheet">取消</button><b>导入 / 合并账本</b><button class="go" data-act="doImport">合并</button></div>
@@ -614,12 +709,12 @@ function summaryText(t){
 
 /* ================= 事件 ================= */
 const ACT={
-  home(){S.cur=null;save();render();scrollTo(0,0)},
-  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};save();render();scrollTo(0,0)},
+  home(){S.cur=null;persist();render();scrollTo(0,0)},
+  open(el){S.cur=el.dataset.id;view={tab:'list',q:'',cat:''};persist();render();scrollTo(0,0);refreshCurrent()},
   newTrip:openNewTrip,createTrip,
   tab(el){view.tab=el.dataset.t;render()},
   fcat(el){view.cat=el.dataset.c;render()},
-  setMe(el){S.me[S.cur]=el.dataset.id;save();render()},
+  setMe(el){S.me[S.cur]=el.dataset.id;persist();render()},
   add(){openEditor(null)},
   edit(el){openEditor(el.dataset.id)},
   closeSheet,
@@ -645,6 +740,9 @@ const ACT={
   stDel(el){if(!confirm('确定删除这笔还款？'))return;const e=trip().expenses.find(x=>x.id===el.dataset.id);e.deleted=true;e.updatedAt=now();save();closeSheet();render()},
   async copySummary(){toast(await copy(summaryText(trip()))?'已复制，去群里粘贴吧':'复制失败')},
   syncOut:openSyncOut,
+  async cloudOn(){const t=trip();if(!sb)return;t.cloud=true;persist();closeSheet();render();await flush();
+    if(syncState==='ok'){toast('☁️ 已上传到云端');openSyncOut()}else toast('上传失败：请确认已在 Supabase 运行 schema.sql')},
+  async syncNow(){await refreshCurrent();closeSheet();toast(syncState==='ok'?'☁️ 已是最新':'同步失败，稍后重试')},
   importSheet:openImport,
   async copyText(el){toast(await copy(el.dataset.v)?'已复制 ✓':'复制失败，请长按文本框手动复制')},
   async shareText(el){try{await navigator.share({title:'旅账同步',text:el.dataset.v})}catch{}},
@@ -657,7 +755,7 @@ const ACT={
   delMember(el){const t=trip(),id=el.dataset.id;
     if(live(t).some(e=>involves(e,id)))return toast('TA 已经有相关账单，不能删除');
     if(!confirm(`删除成员「${mname(t,id)}」？`))return;const m=mem(t,id);m.deleted=true;m.updatedAt=now();save();render()},
-  delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？此操作无法撤销（朋友手机上的不受影响）。`))return;
+  delTrip(){const t=trip();if(!confirm(`确定删除「${t.name}」和里面所有账单？${t.cloud?'只会从这台手机移除，云端和朋友手机上的不受影响（用邀请链接可以重新加入）。':'此操作无法撤销。'}`))return;
     delete S.trips[t.id];delete S.me[t.id];S.order=S.order.filter(x=>x!==t.id);S.cur=null;save();render();toast('已删除')},
 };
 document.addEventListener('click',ev=>{const el=ev.target.closest('[data-act]');if(!el)return;const f=ACT[el.dataset.act];if(f)f(el,ev)});
@@ -686,7 +784,12 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='ne
 (async()=>{
   const h=location.hash;
   if(h.startsWith('#sync=')){history.replaceState(null,'',location.pathname+location.search);render();await doImport(decodeURIComponent(h.slice(6)));}
-  else render();
+  else if(h.startsWith('#join=')){history.replaceState(null,'',location.pathname+location.search);render();await joinTrip(h.slice(6));}
+  else{render();refreshCurrent()}
+  flush();
+  addEventListener('online',()=>{refreshCurrent();flush()});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshCurrent()});
+  setInterval(()=>{if(pendingRows().length)flush()},30000);
   if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
