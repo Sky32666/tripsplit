@@ -600,6 +600,7 @@ function listView(t){
   <div class="chips"><button class="chip ${!view.cat?'on':''}" data-act="fcat" data-c="">全部</button>${CATS.map(c=>`<button class="chip ${view.cat===c[0]?'on':''}" data-act="fcat" data-c="${c[0]}">${c[1]} ${c[2]}</button>`).join('')}<button class="chip ${view.cat==='settle'?'on':''}" data-act="fcat" data-c="settle">💸 还款</button></div>
   <div id="explist" class="${animNext?'anim':''}">${listItems(t)}</div>`;
 }
+const vcPins=()=>{if(!S.prefs.vcPins)S.prefs.vcPins=Object.entries(S.prefs.vcFav||{}).sort((a,b)=>b[1]-a[1]).map(x=>x[0]).slice(0,4);return S.prefs.vcPins};
 const wantVC=t=>(S.prefs.vc||{})[t.id]||t.base;
 function listItems(t){const p=_vc;_vc=wantVC(t);try{return _listItems(t)}finally{_vc=p}}
 function _listItems(t){
@@ -679,9 +680,9 @@ const vcOf=t=>_vc&&_vc!==t.base&&knownRate(t,_vc)?_vc:t.base;
 const vB=(m,t)=>{const c=vcOf(t);return c===t.base?m:Math.round(fromMinor(m,t.base)/(t.rates?.[c]||knownRate(t,c))*10**digits(c))};
 const fB=(m,t)=>{const c=vcOf(t);if(c!==t.base&&WHOLE.has(c)){const u=10**digits(c);return fmt(Math.round(vB(m,t)/u)*u,c).replace(/\.0+$/,'')}return fmt(vB(m,t),c)};
 function withVC(t,fn){const prev=_vc,want=wantVC(t);if(want!==t.base)wantRate(t,want);_vc=want;
-  try{const fav=Object.entries(S.prefs.vcFav||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]);
-    const opts=[...new Set([t.base,...live(t).map(e=>e.currency),...fav,want])];
-    return `<div class="card" style="padding:8px 12px"><div class="chips" style="padding:2px 0;flex-wrap:wrap;overflow:visible"><b style="flex:none;font-size:14px">💱 显示币种</b>${opts.map(c=>`<button class="chip ${c===want?'on':''}" data-act="setVC" data-c="${c}">${curName(c)}</button>`).join('')}<select data-vcmore="1" class="chip" style="flex:none;width:auto"><option value="">🌍 其他…</option>${tripCurs(t).filter(c=>!opts.includes(c)).map(c=>`<option value="${c}">${c} ${curName(c)}</option>`).join('')}</select>${want!==t.base&&vcOf(t)!==want?'<span class="mut small">⏳ 汇率获取中…</span>':''}</div></div>`+fn(t)}
+  try{const fav=vcPins(),used=[...new Set([t.base,...live(t).map(e=>e.currency)])],edit=view.vcEdit;
+    const opts=[...new Set([...used,...fav,want])];
+    return `<div class="card" style="padding:8px 12px"><div class="chips" style="padding:2px 0;flex-wrap:wrap;overflow:visible"><b style="flex:none;font-size:14px">💱 显示币种</b>${opts.map(c=>edit&&!used.includes(c)?`<button class="chip" data-act="unpinVC" data-c="${c}" style="border:1.5px dashed var(--neg)">${curName(c)} ✕</button>`:`<button class="chip ${c===want&&!edit?'on':''}" data-act="setVC" data-c="${c}" ${edit?'style="opacity:.45"':''}>${curName(c)}</button>`).join('')}${edit?'':`<select data-vcmore="1" class="chip" style="flex:none;width:auto"><option value="">🌍 其他…</option>${tripCurs(t).filter(c=>!opts.includes(c)).map(c=>`<option value="${c}">${c} ${curName(c)}</option>`).join('')}</select>`}${fav.some(c=>!used.includes(c))||edit?`<button class="chip" data-act="editVC" style="flex:none">${edit?'✓ 完成':'✏️'}</button>`:''}</div>${edit?'<div class="mut small" style="margin:4px 2px 0">点 ✕ 把不要的币种拿掉；这趟用过的币种会一直在</div>':''}${want!==t.base&&vcOf(t)!==want?'<div class="mut small">⏳ 汇率获取中…</div>':''}</div>`+fn(t)}
   finally{_vc=prev}}
 function _balView(t){
   const b=balances(t),simp=t.simplify!==false,me=S.me[t.id];
@@ -872,7 +873,7 @@ async function autoRate(force){
 function updRateSrc(){const el=$('#ed-rsrc');if(el)el.textContent=ed.rateSrc||''}
 
 /* ================= 自动更新 ================= */
-const APP_VER=21;
+const APP_VER=22;
 async function checkUpdate(){
   if(!/^https?:/.test(location.protocol))return;
   try{const j=await(await fetch('version.json?'+Date.now(),{cache:'no-store'})).json();
@@ -1446,6 +1447,8 @@ const ACT={
   memberEdit(el){closeSheet();openEditor(el.dataset.id)},
   stSave,
   stDel(el){closeSheet();deleteExpense(el.dataset.id)},
+  editVC(){view.vcEdit=!view.vcEdit;render();buzz(8)},
+  unpinVC(el){const t=trip(),c=el.dataset.c;S.prefs.vcPins=vcPins().filter(x=>x!==c);if(wantVC(t)===c)S.prefs.vc[t.id]=t.base;persist();render();buzz(8)},
   setVC(el){const t=trip();S.prefs.vc=S.prefs.vc||{};S.prefs.vc[t.id]=el.dataset.c;persist();render();buzz(8)},
   async copySummary(){toast(await copy(summaryText(trip()))?'已复制，去群里粘贴吧':'复制失败')},
   syncOut:openSyncOut,
@@ -1508,7 +1511,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
     const sum=settleLines(t).filter(l=>stS.bills.has(l.bill)).reduce((a,l)=>a+l.rest,0);if(sum){stS.amt=sum;stS.typed=false}const pc=billCur(t,stS.bills);if(stS.bills.size&&pc!==stS.cur)stSetCur(pc);else{const a=$('#st-amt');if(a&&sum)a.value=stDisp(t);updStSrc()}}
   if(el.id==='st-other'&&stS){stS.bills=new Set();stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);renderSettle()}
   if(el.id==='st-cur'&&stS)stSetCur(el.value);
-  if(el.dataset.vcmore&&el.value){S.prefs.vc=S.prefs.vc||{};S.prefs.vc[t.id]=el.value;S.prefs.vcFav=S.prefs.vcFav||{};S.prefs.vcFav[el.value]=(S.prefs.vcFav[el.value]||0)+1;persist();render()}
+  if(el.dataset.vcmore&&el.value){S.prefs.vc=S.prefs.vc||{};S.prefs.vc[t.id]=el.value;S.prefs.vcPins=[el.value,...vcPins().filter(c=>c!==el.value)].slice(0,4);persist();render()}
   if(el.id==='av-file'&&el.files[0]){const f=el.files[0];el.value='';avatarFromFile(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
