@@ -678,7 +678,7 @@ const fB=(m,t)=>{const c=vcOf(t);if(c!==t.base&&WHOLE.has(c)){const u=10**digits
 function withVC(t,fn){const prev=_vc,want=(S.prefs.vc||{})[t.id]||t.base;if(want!==t.base)wantRate(t,want);_vc=want;
   try{const vc=vcOf(t),opts=[...new Set([t.base,...live(t).map(e=>e.currency),'TWD','MYR','CNY'])];
     if(!opts.includes(want))opts.push(want);
-    return `<div class="chips" style="margin:0 2px 8px"><span class="mut small" style="flex:none">显示币种</span>${opts.map(c=>`<button class="chip ${c===want?'on':''}" data-act="setVC" data-c="${c}">${curName(c)}</button>`).join('')}<select data-vcmore="1" class="chip" style="flex:none;width:auto"><option value="">🌍 其他…</option>${tripCurs(t).filter(c=>!opts.includes(c)).map(c=>`<option value="${c}">${c} ${curName(c)}</option>`).join('')}</select></div>${want!==t.base?`<p class="mut small" style="margin:-4px 4px 8px">${vc===want?`按 Wise 实时汇率换算成 ${want}，只是方便看；记账和还款还是以 ${t.base} 为准`:'⏳ 正在获取汇率…'}</p>`:''}`+fn(t)}
+    return `<div class="card" style="padding:8px 12px"><div class="chips" style="padding:2px 0;flex-wrap:wrap;overflow:visible"><b style="flex:none;font-size:14px">💱 显示币种</b>${opts.map(c=>`<button class="chip ${c===want?'on':''}" data-act="setVC" data-c="${c}">${curName(c)}</button>`).join('')}<select data-vcmore="1" class="chip" style="flex:none;width:auto"><option value="">🌍 其他…</option>${tripCurs(t).filter(c=>!opts.includes(c)).map(c=>`<option value="${c}">${c} ${curName(c)}</option>`).join('')}</select></div>${want!==t.base?`<p class="mut small" style="margin:4px 2px 2px">${vc===want?`按 Wise 实时汇率换算成 ${want}，只是方便看；记账和还款还是以 ${t.base} 为准`:'⏳ 正在获取汇率…'}</p>`:''}</div>`+fn(t)}
   finally{_vc=prev}}
 function _balView(t){
   const b=balances(t),simp=t.simplify!==false,me=S.me[t.id];
@@ -867,6 +867,20 @@ async function autoRate(force){
   return r;
 }
 function updRateSrc(){const el=$('#ed-rsrc');if(el)el.textContent=ed.rateSrc||''}
+
+/* ================= 自动更新 ================= */
+const APP_VER=20;
+async function checkUpdate(){
+  if(!/^https?:/.test(location.protocol))return;
+  try{const j=await(await fetch('version.json?'+Date.now(),{cache:'no-store'})).json();
+    if(!(j.v>APP_VER))return;
+    const k='lvzhang.upd'+j.v,n=+(sessionStorage.getItem(k)||0);if(n>=2)return; // GitHub 还没更新完就别一直刷
+    if($('#sheet-root.open'))return; // 正在填东西就先不打断
+    sessionStorage.setItem(k,n+1);
+    try{const reg=await navigator.serviceWorker?.getRegistration();await reg?.update()}catch{}
+    toast('🔄 有新版本，正在更新…');setTimeout(()=>location.reload(),600);
+  }catch{}
+}
 
 /* ================= 新建旅行 ================= */
 const CODE_AB='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -1520,6 +1534,8 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.id==='ne
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshCurrent()});
   setInterval(()=>{if(pendingRows().length)flush()},30000);
   if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // 自动更新：每次打开 / 切回 App 都看一下有没有新版本，有就自己刷新（不用删掉重装）
+  checkUpdate();document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
 })();
 </script>
 </body>

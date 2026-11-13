@@ -1,5 +1,5 @@
 // 旅账 · service worker：离线缓存 + 锁屏推送
-const C='lvzhang-v19';
+const C='lvzhang-v20';
 const FILES=['./','index.html','config.js','manifest.webmanifest','icon.svg','icon-180.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))));self.clients.claim()});
@@ -11,7 +11,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
   if(u.origin!==location.origin)return;
-  e.respondWith(fetch(e.request).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||caches.match('index.html'))));
+  e.respondWith(fetch(e.request.url,{cache:'no-cache',credentials:'same-origin'}).then(r=>{const cp=r.clone();caches.open(C).then(c=>c.put(e.request,cp));return r}).catch(()=>caches.match(e.request,{ignoreSearch:true}).then(r=>r||caches.match('index.html'))));
 });
 self.addEventListener('push',e=>{
   let d={};try{d=e.data?e.data.json():{}}catch(err){d={title:'旅账',body:e.data&&e.data.text()}}
