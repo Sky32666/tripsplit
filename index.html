@@ -536,7 +536,7 @@ function render(){
   
   $('#app').innerHTML=t?tripView(t):homeView();
   animNext=false;
-  if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,from=_heroPrev[t.id]??to;_heroPrev[t.id]=to;if(from!==to)countUp(el,from,to,t.base)}}
+  if(t){const el=$('.hero .big');if(el){const to=+el.dataset.v,hk=t.id+(el.dataset.c||''),from=_heroPrev[hk]??to;_heroPrev[hk]=to;if(from!==to)countUp(el,from,to,el.dataset.c||t.base)}}
   if(flashIds.size)setTimeout(()=>flashIds.clear(),1900);
   if(t&&view.tab==='set')renderPushBox();
   if(t&&view.tab==='list')pushBanner();
@@ -564,7 +564,8 @@ function homeView(){
   ${!ids.length?`<p class="mut small" style="text-align:center">朋友创建了旅行？问 TA 要<b>房间码和密码</b>，点「加入旅行」</p>`:''}
   </main>`;
 }
-function tripView(t){
+function tripView(t){const p=_vc;_vc=['bal','stats'].includes(view.tab)?((S.prefs.vc||{})[t.id]||t.base):null;try{return _tripView(t)}finally{_vc=p}}
+function _tripView(t){
   const me=S.me[t.id],th=theme(t);
   if(view.tab==='feed'){S.seen[t.id]=now();persist()}
   const ex=live(t).filter(e=>e.type!=='payment');
@@ -572,9 +573,9 @@ function tripView(t){
   const first=tripStart(t),dn=first?dayDiff(first,today())+1:0;
   const dayLbl=!first?'准备出发 ✈️':dn>1?`Day ${dn}`:dn===1?'Day 1 出发啦':dn===0?'明天出发 ✈️':`还有 ${-dn+1} 天出发`;
   let meLine='';
-  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span data-act="avatar" style="display:flex;align-items:center;gap:6px;cursor:pointer">${av(t,me)}${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fmt(b,t.base)+' 💰':b<0?'你欠别人 '+fmt(-b,t.base):'已结清 ✓'}</b></div>`}
+  if(me){const b=balances(t)[me]||0;meLine=`<div class="me"><span data-act="avatar" style="display:flex;align-items:center;gap:6px;cursor:pointer">${av(t,me)}${esc(mname(t,me))}（我）</span><b>${b>0?'别人欠你 '+fB(b,t)+' 💰':b<0?'你欠别人 '+fB(-b,t):'已结清 ✓'}</b></div>`}
   const who=me?'':`<div class="banner" data-act="who" style="cursor:pointer">👋 <b>先选一下你是谁</b>，才能记账和还钱 ›</div>`;
-  const body={list:listView,bal:balView,stats:statsView,feed:feedView,set:setView}[view.tab](t);
+  const body={list:listView,bal:t=>withVC(t,_balView),stats:t=>withVC(t,_statsView),feed:feedView,set:setView}[view.tab](t);
   const un=unreadCount(t);
   const nav=[['list','🧾','账单'],['bal','⚖️','结余'],null,['stats','📊','统计'],['set','⚙️','设置']];
   return `<header class="top"><button class="icon" data-act="home" aria-label="返回">‹</button><div class="ttl">${esc(t.name)}</div>
@@ -584,8 +585,8 @@ function tripView(t){
   <section class="hero">
    <div class="hero-row"><span class="stamp">${th.icon} ${dayLbl}</span><span class="greet">${greeting()}</span></div>
    <div class="lbl">大家一起花了</div>
-   <div class="big" data-v="${total}">${fmt(total,t.base)}</div>
-   <div class="hero-row" style="justify-content:flex-start;gap:10px;margin-top:6px">${avStack(t)}<span class="small" style="opacity:.92">${n} 人 · 人均 ${fmt(Math.round(total/n),t.base)}</span></div>
+   <div class="big" data-v="${vB(total,t)}" data-c="${vcOf(t)}">${fB(total,t)}</div>
+   <div class="hero-row" style="justify-content:flex-start;gap:10px;margin-top:6px">${avStack(t)}<span class="small" style="opacity:.92">${n} 人 · 人均 ${fB(Math.round(total/n),t)}</span></div>
    ${meLine}
    <div class="hero-emoji">${tEmoji(t)}</div>
    <svg class="wave" viewBox="0 0 400 20" preserveAspectRatio="none"><path d="M0 12 C 60 2, 120 22, 200 12 S 340 2, 400 12 V20 H0Z" fill="var(--bg)"/></svg>
@@ -661,24 +662,34 @@ const payBills=(t,p)=>{if(!p)return[];if(p.bills&&p.bills.length)return p.bills;
 const forTxt=(t,p)=>payBills(t,p).map(id=>billName(t,id)).join('、');
 function lineHTML(t,x,me){
   const cls=x.from===me?'neg':x.to===me?'pos':'';
-  const amt=x.paid>=x.amt?`<b class="mut"><s>${fmt(x.amt,t.base)}</s> ✓ 已还</b>`:x.rest<=0?`<b class="mut">${fmt(x.amt,t.base)} ⏳ 待确认</b>`
-    :`<b class="${cls}">${fmt(x.rest,t.base)}${x.paid||x.pending?` <span class="mut small" style="font-weight:500">/ ${fmt(x.amt,t.base)}</span>`:''}</b>`;
+  const amt=x.paid>=x.amt?`<b class="mut"><s>${fB(x.amt,t)}</s> ✓ 已还</b>`:x.rest<=0?`<b class="mut">${fB(x.amt,t)} ⏳ 待确认</b>`
+    :`<b class="${cls}">${fB(x.rest,t)}${x.paid||x.pending?` <span class="mut small" style="font-weight:500">/ ${fB(x.amt,t)}</span>`:''}</b>`;
   const pc=t.expenses.find(e=>e.id===x.bill)?.payCur;if(pc&&pc!==t.base)wantRate(t,pc);
   const btn=x.rest>0&&(x.from===me||x.to===me)?`<button class="btn sm ${x.from===me?'primary':''}" style="margin-left:6px;padding:4px 9px" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.rest}" data-bill="${x.bill}">${x.from===me?'还这笔':'已收到'}</button>`:'';
-  return `<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span>${amt}${x.rest>0&&pc?altAmt(t,x.rest,pc):''}${btn}</div>`;
+  return `<div class="bl">${av(t,x.from)}<span>${esc(mname(t,x.from))}</span><span>→</span>${av(t,x.to)}<span>${esc(mname(t,x.to))}</span>${amt}${x.rest>0&&pc&&pc!==vcOf(t)?altAmt(t,x.rest,pc):''}${btn}</div>`;
 }
 function billDebts(t,e){const{T,paid,owed}=baseSplit(e,t),res=[];if(!T)return res;
   for(const o in owed)for(const p in paid){if(o===p)continue;const v=Math.round(owed[o]*paid[p]/T);if(v>0)res.push({from:o,to:p,amt:v})}return res}
-function balView(t){
+/* ---------- 结余 / 统计：自己选用什么币种看（只是显示，结算还是本位币） ---------- */
+let _vc=null;
+const vcOf=t=>_vc&&_vc!==t.base&&knownRate(t,_vc)?_vc:t.base;
+const vB=(m,t)=>{const c=vcOf(t);return c===t.base?m:Math.round(fromMinor(m,t.base)/knownRate(t,c)*10**digits(c))};
+const fB=(m,t)=>{const c=vcOf(t);if(c!==t.base&&WHOLE.has(c)){const u=10**digits(c);return fmt(Math.round(vB(m,t)/u)*u,c).replace(/\.0+$/,'')}return fmt(vB(m,t),c)};
+function withVC(t,fn){const prev=_vc,want=(S.prefs.vc||{})[t.id]||t.base;if(want!==t.base)wantRate(t,want);_vc=want;
+  try{const vc=vcOf(t),opts=[...new Set([t.base,...live(t).map(e=>e.currency),'TWD','MYR','CNY'])];
+    if(!opts.includes(want))opts.push(want);
+    return `<div class="chips" style="margin:0 2px 8px"><span class="mut small" style="flex:none">显示币种</span>${opts.map(c=>`<button class="chip ${c===want?'on':''}" data-act="setVC" data-c="${c}">${curName(c)}</button>`).join('')}<select data-vcmore="1" class="chip" style="flex:none;width:auto"><option value="">🌍 其他…</option>${tripCurs(t).filter(c=>!opts.includes(c)).map(c=>`<option value="${c}">${c} ${curName(c)}</option>`).join('')}</select></div>${want!==t.base?`<p class="mut small" style="margin:-4px 4px 8px">${vc===want?`按 Wise 实时汇率换算成 ${want}，只是方便看；记账和还款还是以 ${t.base} 为准`:'⏳ 正在获取汇率…'}</p>`:''}`+fn(t)}
+  finally{_vc=prev}}
+function _balView(t){
   const b=balances(t),simp=t.simplify!==false,me=S.me[t.id];
   const ms=t.members.filter(m=>!m.deleted||b[m.id]);
   const mx=Math.max(1,...ms.map(m=>Math.abs(b[m.id]||0)));
-  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${me===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right;flex:none">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fmt(v,t.base)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fmt(-v,t.base)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
+  const rows=ms.map(m=>{const v=b[m.id]||0;return `<div class="brow" data-act="memberSheet" data-id="${m.id}">${av(t,m.id,'lg')}<div class="n">${esc(m.name)}${me===m.id?' <span class="mut small">（我）</span>':''}<div class="bbar"><i style="${v>=0?'left:50%':'right:50%'};width:${Math.abs(v)/mx*50}%;background:${v>=0?'var(--pos)':'var(--neg)'}"></i></div></div><div style="text-align:right;flex:none">${v>0?`<span class="pos small">应收</span><br><b class="pos">${fB(v,t)}</b>`:v<0?`<span class="neg small">应付</span><br><b class="neg">${fB(-v,t)}</b>`:'<span class="mut">已结清</span>'}</div></div>`}).join('');
   const pend=live(t).filter(e=>pstat(e)==='pending');
   const xbtn=x=>{if(pend.some(e=>e.from===x.from&&e.to===x.to))return `<span class="mut small" style="flex:none">⏳ 待确认</span>`;
     return x.from===me?`<button class="btn sm primary" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">我已还</button>`:x.to===me?`<button class="btn sm" data-act="settle" data-from="${x.from}" data-to="${x.to}" data-amt="${x.amt}">已收到</button>`:''};
   const pendCard=pend.length?`<div class="card" style="border:1.5px solid var(--pri)"><h3>⏳ 等待确认的还款</h3>${pend.map(e=>`<div class="xfer">${av(t,e.from)}<div class="n"><b>${esc(mname(t,e.from))}</b> 说已还给 <b>${esc(mname(t,e.to))}</b>${forTxt(t,e)?` <span class="mut small">（${esc(forTxt(t,e))}）</span>`:''}<br><b>${fmt(e.amount,e.currency)}</b> <span class="mut small">${relTime(e.updatedAt||0)}</span></div>${e.to===me?`<div style="display:flex;flex-direction:column;gap:6px;flex:none"><button class="btn sm primary" data-act="payConfirm" data-id="${e.id}">✓ 确认收到</button><button class="btn sm" data-act="payReject" data-id="${e.id}">没收到</button></div>`:e.from===me?`<button class="btn sm" data-act="edit" data-id="${e.id}">等 TA 确认…</button>`:'<span class="mut small" style="flex:none">等待确认</span>'}</div>`).join('')}</div>`:'';
-  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fmt(x.amt,t.base)}</b></div>${av(t,x.to)}${xbtn(x)}</div>`).join('');
+  const xrows=xs=>xs.map(x=>`<div class="xfer">${av(t,x.from)}<div class="n"><b>${esc(mname(t,x.from))}</b> 给 <b>${esc(mname(t,x.to))}</b><br><b class="${x.from===me?'neg':x.to===me?'pos':''}">${fB(x.amt,t)}</b></div>${av(t,x.to)}${xbtn(x)}</div>`).join('');
   const done=`<div class="empty" style="padding:16px"><div class="e">🎉</div><div>大家都结清了，继续玩吧！</div></div>`;
   const tail=xs=>`${xs.length?`<button class="btn block" data-act="copySummary">📋 复制结算清单（发到群聊）</button>`:''}<button class="btn ghost block" data-act="settle">＋ 记录一笔还款</button><p class="mut small" style="margin:4px 2px 0">💡 欠钱的人点「我已还」后，要等收钱的人点「确认收到」才算还清。</p>`;
   let how;
@@ -688,7 +699,7 @@ function balView(t){
     const bills=live(t).sort((a,c)=>c.date.localeCompare(a.date)||(c.createdAt||0)-(a.createdAt||0)).map(e=>{
       if(e.type==='payment')return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>💸 还款${forTxt(t,e)?` · ${esc(forTxt(t,e))}`:''}</span><span class="mut small">${e.date.slice(5)}</span></div><div class="bl">${av(t,e.from)}<span>${esc(mname(t,e.from))}</span><span>${pstat(e)==='pending'?'说已还给':pstat(e)==='rejected'?'（没收到）':'已还给'}</span>${av(t,e.to)}<span>${esc(mname(t,e.to))}</span><b class="pos">${fmt(e.amount,e.currency)}</b></div></div>`;
       const ds=BL[e.id]||[],clear=ds.length&&ds.every(x=>x.paid>=x.amt);
-      return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}${clear?' <span class="pos small">✓ 已结清</span>':''}</span><span class="mut small">${e.date.slice(5)} · ${fmt(baseTotal(e,t),t.base)}</span></div>${ds.map(x=>lineHTML(t,x,me)).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
+      return `<div class="bill" data-act="edit" data-id="${e.id}"><div class="bh"><span>${cat(e.category)[1]} ${esc(e.title)}${clear?' <span class="pos small">✓ 已结清</span>':''}</span><span class="mut small">${e.date.slice(5)} · ${fB(baseTotal(e,t),t)}</span></div>${ds.map(x=>lineHTML(t,x,me)).join('')||'<div class="bl">付款人自己的，不用还</div>'}</div>`}).join('');
     const xs=pairwise(t);
     how=`<div class="card"><h3>🧾 每笔账单谁欠谁 <span class="mut small" style="font-weight:500">· 没有合并</span></h3>${bills||'<p class="mut">还没有账单</p>'}</div>
     <div class="card"><h3>🤝 两个人之间合计</h3>${xrows(xs)||done}${tail(xs)}</div>`;
@@ -697,7 +708,7 @@ function balView(t){
   <div class="card"><div class="switch"><div><b>简化债务</b><div class="mut small">${simp?'开：合并转账，让还款次数最少':'关：按每一笔账单分别显示谁欠谁'}</div></div><input type="checkbox" data-ts="simplify" ${simp?'checked':''}></div></div>
   ${how}`;
 }
-function statsView(t){
+function _statsView(t){
   const ex=live(t).filter(e=>e.type!=='payment');
   if(!ex.length)return `<div class="empty"><div class="e">📊</div><p>记几笔账之后这里会出现图表</p></div>`;
   const byCat={},byDay={},cons={},paid={};let total=0;
@@ -707,15 +718,15 @@ function statsView(t){
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   const C=2*Math.PI*40;let off=0;
   const arcs=cats.map(([k,v])=>{const len=v/total*C,s=`<circle r="40" cx="60" cy="60" fill="none" stroke="${CATCOL[k]||'#888'}" stroke-width="18" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`;off+=len;return s}).join('');
-  const donut=`<svg viewBox="0 0 120 120" width="150" height="150" style="flex:none">${arcs}<text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">总计</text><text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(fmt(total,t.base).replace(/\.\d+$/,''))}</text></svg>`;
+  const donut=`<svg viewBox="0 0 120 120" width="150" height="150" style="flex:none">${arcs}<text x="60" y="57" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">总计</text><text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">${esc(fB(total,t).replace(/\.\d+$/,''))}</text></svg>`;
   const legend=cats.map(([k,v])=>`<div data-act="statCat" data-c="${k}"><i style="background:${CATCOL[k]}"></i><span>${cat(k)[1]} ${cat(k)[2]}</span><b>${Math.round(v/total*100)}%</b></div>`).join('');
   const maxP=Math.max(...t.members.map(m=>Math.max(cons[m.id]||0,paid[m.id]||0)),1);
   const ppl=t.members.filter(m=>cons[m.id]||paid[m.id]).map(m=>`<div style="margin:10px 0"><div style="display:flex;align-items:center;gap:8px">${av(t,m.id)}<b style="flex:1">${esc(m.name)}</b></div>
-    <div class="small mut" style="display:flex;justify-content:space-between;margin-top:4px"><span>消费</span><span>${fmt(cons[m.id]||0,t.base)}</span></div><div class="bar"><i style="width:${(cons[m.id]||0)/maxP*100}%;background:${m.color}"></i></div>
-    <div class="small mut" style="display:flex;justify-content:space-between"><span>垫付</span><span>${fmt(paid[m.id]||0,t.base)}</span></div><div class="bar"><i style="width:${(paid[m.id]||0)/maxP*100}%;background:${m.color};opacity:.45"></i></div></div>`).join('');
+    <div class="small mut" style="display:flex;justify-content:space-between;margin-top:4px"><span>消费</span><span>${fB(cons[m.id]||0,t)}</span></div><div class="bar"><i style="width:${(cons[m.id]||0)/maxP*100}%;background:${m.color}"></i></div>
+    <div class="small mut" style="display:flex;justify-content:space-between"><span>垫付</span><span>${fB(paid[m.id]||0,t)}</span></div><div class="bar"><i style="width:${(paid[m.id]||0)/maxP*100}%;background:${m.color};opacity:.45"></i></div></div>`).join('');
   const days=Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])),maxD=Math.max(...days.map(d=>d[1]));
-  const dayBars=days.map(([d,v])=>`<div title="${d} ${fmt(v,t.base)}"><span style="margin-bottom:2px">${Math.round(fromMinor(v,t.base))}</span><i style="height:${v/maxD*100}%"></i><span>${+d.slice(5,7)}/${+d.slice(8)}</span></div>`).join('');
-  return `<div class="card"><div class="stat4"><div><span class="mut small">总花费</span><b>${fmt(total,t.base)}</b></div><div><span class="mut small">人均</span><b>${fmt(Math.round(total/n),t.base)}</b></div><div><span class="mut small">日均</span><b>${fmt(Math.round(total/nd),t.base)}</b></div><div><span class="mut small">账单数</span><b>${ex.length} 笔</b></div></div></div>
+  const dayBars=days.map(([d,v])=>`<div title="${d} ${fB(v,t)}"><span style="margin-bottom:2px">${Math.round(fromMinor(vB(v,t),vcOf(t)))}</span><i style="height:${v/maxD*100}%"></i><span>${+d.slice(5,7)}/${+d.slice(8)}</span></div>`).join('');
+  return `<div class="card"><div class="stat4"><div><span class="mut small">总花费</span><b>${fB(total,t)}</b></div><div><span class="mut small">人均</span><b>${fB(Math.round(total/n),t)}</b></div><div><span class="mut small">日均</span><b>${fB(Math.round(total/nd),t)}</b></div><div><span class="mut small">账单数</span><b>${ex.length} 笔</b></div></div></div>
   <div class="card"><h3>按类别</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut}<div class="legend" style="flex:1;min-width:150px">${legend}</div></div></div>
   <div class="card"><h3>每人消费 vs 垫付</h3>${ppl}</div>
   <div class="card"><h3>每日花费</h3><div class="days">${dayBars}</div></div>`;
@@ -746,7 +757,7 @@ function confetti(){const cv=document.createElement('canvas');cv.className='conf
   const g=cv.getContext('2d'),cols=['#14b8a6','#f97316','#eab308','#ec4899','#3b82f6','#22c55e'],P=Array.from({length:140},()=>({x:cv.width/2,y:cv.height*.35,vx:(Math.random()-.5)*28,vy:-Math.random()*26-6,r:Math.random()*8+5,c:cols[Math.random()*6|0],a:Math.random()*6}));
   let f=0;(function tick(){g.clearRect(0,0,cv.width,cv.height);for(const p of P){p.vy+=.9;p.x+=p.vx;p.y+=p.vy;p.vx*=.98;p.a+=.2;g.save();g.translate(p.x,p.y);g.rotate(p.a);g.fillStyle=p.c;g.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);g.restore()}
     if(++f<110)requestAnimationFrame(tick);else cv.remove()})()}
-function countUp(el,from,to,c){const t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/600),e=1-Math.pow(1-k,3);el.textContent=fmt(Math.round(from+(to-from)*e),c);if(k<1)requestAnimationFrame(step)})(t0)}
+function countUp(el,from,to,c){const t0=performance.now();(function step(t){const k=Math.min(1,(t-t0)/600),e=1-Math.pow(1-k,3);el.textContent=WHOLE.has(c)?fmt(Math.round((from+(to-from)*e)/10**digits(c))*10**digits(c),c).replace(/\.0+$/,''):fmt(Math.round(from+(to-from)*e),c);if(k<1)requestAnimationFrame(step)})(t0)}
 const relTime=ts=>{const d=(Date.now()-ts)/1000;if(d<60)return'刚刚';if(d<3600)return Math.floor(d/60)+' 分钟前';if(d<86400)return Math.floor(d/3600)+' 小时前';const x=new Date(ts);return `${x.getMonth()+1}月${x.getDate()}日 ${String(x.getHours()).padStart(2,'0')}:${String(x.getMinutes()).padStart(2,'0')}`};
 async function copy(text){try{await navigator.clipboard.writeText(text);return true}catch{const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch{}ta.remove();return ok}}
 function download(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
@@ -985,10 +996,10 @@ function renderEditor(focus){
     ${ed.receipt?`<img class="thumb" src="${ed.receipt}" data-act="viewImg" style="width:44px;height:44px"><button class="btn sm" data-act="edDelReceipt">移除</button>`:''}</div>
    ${scanBox()}
    <input class="in" data-f="title" placeholder="买了什么？例如：晚餐烧肉" value="${esc(ed.title)}" style="font-size:17px">
-   <div class="amtrow"><select data-f="currency">${CUR.map(x=>`<option value="${x}" ${x===c?'selected':''}>${x}</option>`).join('')}</select>
+   <div class="amtrow"><select data-f="currency">${[...new Set([...CUR,...WISE_CUR,c])].map(x=>`<option value="${x}" ${x===c?'selected':''}>${x}</option>`).join('')}</select>
     ${ed.mode==='items'?`<div class="bigamt" id="ed-total"></div>`:`<input class="bigamt" data-f="amountStr" inputmode="decimal" placeholder="0" value="${esc(ed.amountStr)}">`}</div>
    ${c!==t.base?`<div class="ratebox">1 ${c} = <input data-f="rate" inputmode="decimal" placeholder="汇率" value="${esc(ed.rate)}"> ${t.base} <button class="btn sm" data-act="edRate">🔄 Wise</button><span id="ed-conv" class="mut small" style="width:100%"></span><span id="ed-rsrc" class="mut small" style="width:100%">${esc(ed.rateSrc||'')}</span></div>`:''}
-   <label class="fld" style="margin-top:8px"><span>💱 大家还钱给付款人时用</span><select data-f="payCur">${[...new Set([t.base,c,ed.payCur,...tripCurs(t)])].map(x=>`<option value="${x}" ${x===ed.payCur?'selected':''}>${x}${CURNAME[x]?' '+CURNAME[x]:''}</option>`).join('')}</select></label>
+   <label class="fld" style="margin-top:8px"><span>💱 大家还钱给付款人时用</span><select data-f="payCur">${[...new Set([t.base,c,ed.payCur,...tripCurs(t)])].map(x=>`<option value="${x}" ${x===ed.payCur?'selected':''}>${x} ${curName(x)}</option>`).join('')}</select></label>
    <div class="chips" style="margin-top:10px">${CATS.map(x=>`<button class="chip ${ed.category===x[0]?'on':''}" data-act="edCat" data-c="${x[0]}">${x[1]} ${x[2]}</button>`).join('')}</div>
    <div class="grid2"><label class="fld"><span>日期</span><input type="date" data-f="date" value="${ed.date}"></label>
     <label class="fld"><span>谁付的钱</span><select data-f="payer">${M.map(m=>`<option value="${m.id}" ${ed.payMode==='single'&&ed.payer===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}<option value="__multi" ${ed.payMode==='multi'?'selected':''}>多人一起付…</option></select></label></div>
@@ -1095,7 +1106,10 @@ function openView(e){
 let stS=null;
 const suggestAmt=(t,from,to)=>((t.simplify!==false?simplify(balances(t)):pairwise(t)).find(x=>x.from===from&&x.to===to)||{}).amt||0;
 /* ---------- 还款币种：收钱的人可以选「我想收台币 / 马币」 ---------- */
-const tripCurs=t=>[...new Set([t.base,...live(t).map(e=>e.currency),...Object.keys(t.rates||{}),...CUR].filter(Boolean))];
+const WISE_CUR='AED AUD BDT BGN BRL CAD CHF CLP CNY COP CZK DKK EGP EUR GBP GEL HKD HUF IDR ILS INR ISK JPY KES KRW LKR MAD MXN MYR NGN NOK NPR NZD PHP PKR PLN RON SEK SGD THB TRY TWD UAH USD UYU VND ZAR'.split(' ');
+const _dn=(()=>{try{return new Intl.DisplayNames(['zh-CN'],{type:'currency'})}catch{return null}})();
+const curName=c=>CURNAME[c]||(_dn&&_dn.of(c)!==c?_dn.of(c):'')||c;
+const tripCurs=t=>[...new Set([t.base,...live(t).map(e=>e.currency),...Object.keys(t.rates||{}),...CUR,...WISE_CUR].filter(Boolean))];
 // 每笔账单可以选「大家还钱用什么币」；勾了多笔且币种一样才跟着用，否则用本位币
 const billCur=(t,ids)=>{const cs=[...new Set([...(ids||[])].map(id=>{const e=t.expenses.find(x=>x.id===id);return e?.payCur||t.base}))];return cs.length===1?cs[0]:t.base};
 const knownRate=(t,c)=>c===t.base?1:(_rateCache[c+t.base]?.rate||t.rates?.[c]||0); // 1 c = ? base
@@ -1415,6 +1429,7 @@ const ACT={
   memberEdit(el){closeSheet();openEditor(el.dataset.id)},
   stSave,
   stDel(el){closeSheet();deleteExpense(el.dataset.id)},
+  setVC(el){const t=trip();S.prefs.vc=S.prefs.vc||{};S.prefs.vc[t.id]=el.dataset.c;persist();render();buzz(8)},
   async copySummary(){toast(await copy(summaryText(trip()))?'已复制，去群里粘贴吧':'复制失败')},
   syncOut:openSyncOut,
   async cloudOn(){const t=trip();if(!sb)return;t.cloud=true;persist();closeSheet();render();await flush();
@@ -1476,6 +1491,7 @@ document.addEventListener('change',async ev=>{const el=ev.target,t=trip();
     const sum=settleLines(t).filter(l=>stS.bills.has(l.bill)).reduce((a,l)=>a+l.rest,0);if(sum){stS.amt=sum;stS.typed=false}const pc=billCur(t,stS.bills);if(stS.bills.size&&pc!==stS.cur)stSetCur(pc);else{const a=$('#st-amt');if(a&&sum)a.value=stDisp(t);updStSrc()}}
   if(el.id==='st-other'&&stS){stS.bills=new Set();stS.other=el.value;const me=S.me[t.id];stS.amt=stS.mode==='pay'?suggestAmt(t,me,el.value):suggestAmt(t,el.value,me);renderSettle()}
   if(el.id==='st-cur'&&stS)stSetCur(el.value);
+  if(el.dataset.vcmore&&el.value){S.prefs.vc=S.prefs.vc||{};S.prefs.vc[t.id]=el.value;persist();render()}
   if(el.id==='av-file'&&el.files[0]){const f=el.files[0];el.value='';avatarFromFile(f)}
   if(el.id==='imp-file'&&el.files[0]){doImport(await el.files[0].text())}
   if(el.dataset.pref){S.prefs[el.dataset.pref]=el.checked;persist();if(el.dataset.pref==='sound'&&el.checked)chime();if(el.dataset.pref==='vibrate'&&el.checked)buzz(30)}
